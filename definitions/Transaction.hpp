@@ -29,6 +29,8 @@ private:
     int amount;
 };
 
+class SecurityTransaction : public Transaction {};
+
 // class StockTransaction : Transaction
 // {
 // };

@@ -5,6 +5,8 @@
 #include <type_traits>
 #include <concepts>
 #include <iostream>
+#include <unordered_map>
+
 
 enum Currency
 {
@@ -68,6 +70,12 @@ private:
     Currency currency;
 };
 
+class SecuritiesAccount : public Account<SecurityTransaction> {};
+
+struct DatabaseMock {  // TODO: Use UIID keys
+    std::unordered_map<int, SavingsAccount> savingAccounts;
+};
+
 // // You should not be able to make a strockTransaction if you
 // // have no stockAccount
 
@@ -80,8 +88,8 @@ private:
 // template <typename X>
 // concept SecurityAsset = std::is_same<X, Stock> || std::is_same<X, Bond>;
 
-// template <typename X>
-// concept _CashTransaction = std::is_same<X, CashTransaction>;
+template <typename X>
+concept _CashTransaction = std::same_as<X, CashTransaction>;
 
 // // trait til cash
 
