@@ -6,14 +6,15 @@
 #include "definitions/Event.hpp"
 
 int main() {
-    MessageQueue<Event> event_queue;
+    MessageQueue<Event> event_queue; // Main event queue
 
-    Bond* bond = new Bond();
-    std::cout << bond->foo();
+    SavingsAccount s1(1, "Forbrugskonto", DKK, 10000);
+    SavingsAccount s2(2, "Opsparingskonto", DKK, 20000);
 
-    std::vector<StockAccount> accounts; 
+    CashTransaction ct1(2000, s1.getID(), s2.getID());
+
+    event_queue.enqueue(ct1);
     
-    delete bond;
 }
 
 /* 
