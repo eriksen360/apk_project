@@ -2,9 +2,11 @@
 #include <vector>
 #include "definitions/Asset.hpp"
 #include "definitions/Account.hpp"
-
+#include "definitions/Queue.hpp"
+#include "definitions/Event.hpp"
 
 int main() {
+    MessageQueue<Event> event_queue;
 
     Bond* bond = new Bond();
     std::cout << bond->foo();
