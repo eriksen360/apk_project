@@ -18,7 +18,11 @@ public:
     int getTransactionAmount() { return amount; };
 
     void createID() override {
-        setID(123);
+        setID(123); // TODO: make correct implementation
+    }
+
+    int getAmount() const{
+        return amount;
     }
 
 private:
@@ -43,8 +47,7 @@ private:
 // public:
 //     U convert(T from, U to); // Static?
 // };
-
-// /*
+/*
     Concept til at gøre is_convertible_from_and_to et trait på alle transaktiontyper
 
     Stock og Bond er ikke konverterbare intern, men begge konverterbare til Cash

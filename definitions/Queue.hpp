@@ -20,12 +20,19 @@ public:
         cond_var.notify_one();
     }
 
+    void enqueue(T &&item) // Used for movable
+    {
+        std::scoped_lock<std::mutex> lock(mtx);
+        queue.push(std::move(item));
+        cond_var.notify_one();
+    }
+
     T dequeue()
     {
-        std::unique_lock<std::mutex> lock(mtx); // use unique_lock for wait() and limited to this scope
+        std::unique_lock<std::mutex> lock(mtx);
         cond_var.wait(lock, [this]
-                      { return !queue.empty(); }); // make sure the queue is not empty
-        T value = queue.front();
+                      { return !queue.empty(); });
+        T value = std::move(queue.front()); // Use std::move for movable types
         queue.pop();
 
         return value;

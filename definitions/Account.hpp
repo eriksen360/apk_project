@@ -4,6 +4,7 @@
 #include "Asset.hpp"
 #include <type_traits>
 #include <concepts>
+#include <iostream>
 
 enum Currency
 {
@@ -17,10 +18,18 @@ class Account
 public:
     Account(int id, std::string name) : id(id), name(std::move(name)) {}
 
-    virtual void addToTransactionLog(T transaction) = 0;
+    virtual void print() = 0;
+
+    virtual void addToTransactionLog(T t){
+        transactions.push_back(t);
+    }
 
     virtual int getID() const{
         return id;
+    }
+
+    virtual std::string getName() const {
+        return name;
     }
 
 private:
@@ -35,9 +44,23 @@ public:
     SavingsAccount(int id, std::string name, Currency currency, int amount = 0)
         : Account<CashTransaction>(id, std::move(name)), currency(currency), amount(amount) {}
 
-    void addToTransactionLog(CashTransaction t) override
-    {
-        //transactions.push_back(t);
+    int getAmount() const {
+        return amount;
+    }
+
+    void addAmount(int n){
+        amount += n;
+    }
+
+    void removeAmount(int n){
+        amount -= n;
+    }
+
+    void print() override {
+        std::cout << "Type: Savingsaccount\n"
+                  << "ID: " << getID() << '\n'
+                  << "Name: " << getName() << '\n'
+                  << "Amount: " << getAmount() << "\n\n";
     }
 
 private:

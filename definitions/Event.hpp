@@ -17,7 +17,7 @@ public:
         return id;
     };
 
-    virtual ~Event();
+    virtual ~Event() {}
 
 protected:
     void setID(int new_id)
