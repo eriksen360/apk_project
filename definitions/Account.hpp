@@ -43,19 +43,23 @@ private:
 class SavingsAccount : public Account<CashTransaction>
 {
 public:
-    SavingsAccount(int id, std::string name, Currency currency, int amount = 0)
-        : Account<CashTransaction>(id, std::move(name)), currency(currency), amount(amount) {}
+    SavingsAccount(int id, std::string name, Cash cash)
+        : Account<CashTransaction>(id, std::move(name)), cash(cash) {}  // TODO: See exmaple in slides for std::moving own object
 
     int getAmount() const {
-        return amount;
+        return cash.getAmount();
     }
 
     void addAmount(int n){
-        amount += n;
+        cash.addAmount(n);
     }
 
     void removeAmount(int n){
-        amount -= n;
+        cash.removeAmount(n);
+    }
+
+    Currency getCurrency() const {
+        return cash.getCurrency();
     }
 
     void print() override {
@@ -66,14 +70,20 @@ public:
     }
 
 private:
-    int amount;
-    Currency currency;
+    Cash cash;  // overload operation med concept til at specificere at currency matcher cash.currency
 };
 
-class SecuritiesAccount : public Account<SecurityTransaction> {};
+class SecuritiesAccount : public Account<SecurityTransaction> {
+public:
+    SavingsAccount(int id, std::string name, Currency currency, int amount = 0) : Account<CashTransaction>(id, std::move(name)), currency(currency), amount(amount) {}
+    ~SavingsAccount() {};
+private:
+    std::vector<Security> securities;
+};
 
 struct DatabaseMock {  // TODO: Use UIID keys
     std::unordered_map<int, SavingsAccount> savingAccounts;
+    std::unordered_map<int, SecuritiesAccount> securityAccounts;
 };
 
 // // You should not be able to make a strockTransaction if you

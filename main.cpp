@@ -1,83 +1,63 @@
 #include <iostream>
 #include <vector>
+#include <typeinfo>
 //#include "definitions/Asset.hpp"
 #include "definitions/Account.hpp"
 #include "definitions/Queue.hpp"
 // #include "definitions/Event.hpp"
 #include <memory>
-#include "Threads.cpp"
-
-pthread_cond_t cashTransactionCond;
-pthread_cond_t securityTransactionCond;
-
-bool queueEmpty = true;
-
-pthread_mutex_t accountsMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t eventQueueMutex = PTHREAD_MUTEX_INITIALIZER;
 
 DatabaseMock* database = new DatabaseMock();
-MessageQueue<std::unique_ptr<Event>> event_queue; // Main event queue. -> Why not for each EventType?
+EventMessageQueue<std::unique_ptr<Event>> event_queue; // Main event queue. Only supports Event-derived types, as Event is abstract.
                                                       // unique_ptr is used as it is not
                                                       // possible to create intances of Event
                                                       // because it is abstract
 
-void *SavingsThreadFunction(void* arg) {
+void cashTransactionThreadFunction() {
 
-    /*
-        If event is enqueued or queue is not empty we should get
-        mutex, check if element in front is type we should grab
-        and then if match dequeue it to thread.
+    for (;;) {
 
-        EventEnqueued is a thread condition
-        We have a QueueThread which has the purpose of monitoring the queue and marking it empty or not for the other queues.
-    
-    */
+        if (event_queue.frontIsOfType(typeid(CashTransaction))) {
+            std::cout << "CASH TYPE\n";
+            std::unique_ptr<Event> event = event_queue.dequeue();  // Should move object 
+            CashTransaction* transaction = static_cast<CashTransaction*>(event.get());
 
-    
-
-
-
-
-    // Dequeue from MockDB -> Use Type of Event to deque
-
-    //pthread_mutex_lock(&eventQueueMutex);
-
-    
-
-    // Wait for condition set by by client or queue?
-    auto eventHandler = event_queue.dequeue();  // get the unique_ptr of the event from the queue
-    
-    // If event extract by move, unlock and handle. Hvorfor ikke en kø til hver type?
-    pthread_mutex_unlock(&eventQueueMutex);
-
-    // Do something with Event
-
-    // Wait for DB connection to open
-
-    // Update Account element 
-
-    // release database connection
+            // Handle Transaction
+        }
+    }
 }
 
-void *SecuritiesThreadFunction(void* arg) {
+void SecurityTransactionThreadFunction() {
 
+    for (;;) {
+
+        if (event_queue.frontIsOfType(typeid(SecurityTransaction))) {
+            std::cout << "SECURITY TYPE\n";
+            std::unique_ptr<Event> event = event_queue.dequeue();  // Should move object 
+            SecurityTransaction* transaction = static_cast<SecurityTransaction*>(event.get());
+
+            // Handle Transaction
+        }
+    }
 }
 
 
 int main()
 {
-    pthread_t savingsThread;
-    pthread_t securitiesThread;
-
-    SavingsAccount s1(1, "Forbrugskonto", DKK, 10000);
-    SavingsAccount s2(2, "Opsparingskonto", DKK, 20000);
-    database->savingAccounts.insert(std::pair<int, SavingsAccount>{1, s1});
-    database->savingAccounts.insert(std::pair<int, SavingsAccount>{2, s2});
+    SavingsAccount s1(1, "Forbrugskonto", Cash(10000, DKK));
+    SavingsAccount s2(2, "Opsparingskonto", Cash(20000, DKK));
+    SecuritiesAccount s3(1, "Aktiekonto", USD, 5000);
+    database->savingAccounts.insert(std::pair<int, SavingsAccount>{s1.getID(), s1});
+    database->savingAccounts.insert(std::pair<int, SavingsAccount>{s2.getID(), s2});
+    database->securityAccounts.insert(std::pair<int, SecuritiesAccount>{s3.getID(), s3});
 
     // std::unique_ptr<Event> eventRequest = std::make_unique<CashTransaction>(2000, s1.getID(), s2.getID()); //wrap event object in unique_ptr
 
-    pthread_create(&savingsThread, NULL, &SavingsThreadFunction, NULL);
-    pthread_create(&securitiesThread, NULL, &SecuritiesThreadFunction, NULL);
+    std::thread cashTransactionThread (cashTransactionThreadFunction);
+    std::thread securitiesTransactionThread (SecurityTransactionThreadFunction);
+
+    cashTransactionThread.detach();
+    securitiesTransactionThread.detach();
 
     // event_queue.enqueue(std::move(eventRequest)); // move the unique_ptr of the event to the queue
 
@@ -103,11 +83,13 @@ int main()
             // Enqueue a CashTransaction
             eventRequest = std::make_unique<CashTransaction>(2000, s1.getID(), s2.getID()); //wrap event object in unique_ptr
             event_queue.enqueue(std::move(eventRequest)); // move the unique_ptr of the event to the queue
-            pthread_cond_signal(&cashTransactionCond);
             break;
         case 2:
+
             // Select Stock
-            // Enqueue a StockTransaction
+
+            eventRequest = std::make_unique<SecurityTransaction>(2000, s1.getID(), s2.getID()); //wrap event object in unique_ptr
+            event_queue.enqueue(std::move(eventRequest)); // move the unique_ptr of the event to the queue
             break;
         case 3:
             // Select Stock
@@ -126,11 +108,11 @@ int main()
     // casting the Event ptr to CashTransaction ptr. 
     // Should be used with caution, as it is done runtime
     // Skal laves om til exception hvis den fejler
-    if (auto cashTransaction = static_cast<CashTransaction *>(eventHandler.get()))
-    {
-        s1.removeAmount(cashTransaction->getAmount());
-        s2.addAmount(cashTransaction->getAmount());
-    }
+    // if (auto cashTransaction = static_cast<CashTransaction *>(eventHandler.get()))
+    // {
+    //     s1.removeAmount(cashTransaction->getAmount());
+    //     s2.addAmount(cashTransaction->getAmount());
+    // }
 
     s1.print();
     s2.print();

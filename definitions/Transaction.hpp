@@ -29,26 +29,40 @@ private:
     int amount;
 };
 
-class SecurityTransaction : public Transaction {};
+// Transactions requires std::constness of type -> Queue should contain * to const Events
 
-// class StockTransaction : Transaction
-// {
-// };
+class SecurityTransaction : public Transaction {
+public:
+    virtual void buyAsset() = 0;
+    virtual void sellAsset() = 0;
+};
 
-// class BondTransaction : Transaction
-// {
-// };
+class BondTransaction : public SecurityTransaction
+{
+private:
+    std::vector<Bond> bonds;
+};
 
-// template <typename T, typename U> // T1 and T2 must be of derived type Transaction
-// class ConversionTransaction : Transaction
-// {
-// private:
-//     T from;
-//     U to;
+class StockTransaction : public SecurityTransaction
+{
+private:
+    std::vector<Stock> stocks;
+};
 
-// public:
-//     U convert(T from, U to); // Static?
-// };
+template <typename T, typename U> 
+requires asset_is_convertible<T, U>
+class ConversionTransaction : Transaction
+{
+private:
+    T from;
+    U to;
+public:
+    U convert(T from, U to);
+};
+
+
+
+
 /*
     Concept til at gøre is_convertible_from_and_to et trait på alle transaktiontyper
 

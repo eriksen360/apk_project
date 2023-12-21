@@ -8,10 +8,14 @@ TODO: Add rule of 5
 */
 
 template <typename T>
-class MessageQueue
+class EventMessageQueue
 {
 public:
-    MessageQueue() {}
+    EventMessageQueue() {
+
+        // constexpr to ensure that T derives from Event
+
+    }
 
     void enqueue(const T &item)
     {
@@ -27,6 +31,15 @@ public:
         cond_var.notify_one();
     }
 
+
+    bool frontIsOfType(const std::type_info& type) {
+        std::scoped_lock<std::mutex> lock(mtx);
+        if (!queue.empty()) {
+            return typeid(*queue.front()) == type;
+        }
+        return false;
+    }
+
     T dequeue()
     {
         std::unique_lock<std::mutex> lock(mtx);
@@ -37,6 +50,8 @@ public:
 
         return value;
     }
+
+    ~EventMessageQueue() {};
 
 private:
     std::queue<T> queue;
