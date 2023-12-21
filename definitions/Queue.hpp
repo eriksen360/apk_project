@@ -11,10 +11,10 @@ template <typename T>
 class EventMessageQueue
 {
 public:
-    EventMessageQueue() {
+    EventMessageQueue()
+    {
 
         // constexpr to ensure that T derives from Event
-
     }
 
     void enqueue(const T &item)
@@ -31,10 +31,11 @@ public:
         cond_var.notify_one();
     }
 
-
-    bool frontIsOfType(const std::type_info& type) {
+    bool frontIsOfType(const std::type_info &type)
+    {
         std::scoped_lock<std::mutex> lock(mtx);
-        if (!queue.empty()) {
+        if (!queue.empty())
+        {
             return typeid(*queue.front()) == type;
         }
         return false;
@@ -51,7 +52,7 @@ public:
         return value;
     }
 
-    ~EventMessageQueue() {};
+    ~EventMessageQueue(){};
 
 private:
     std::queue<T> queue;

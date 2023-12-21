@@ -7,7 +7,7 @@
 // #include "definitions/Event.hpp"
 #include <memory>
 
-DatabaseMock* database = new DatabaseMock();
+DatabaseMock database;
 EventMessageQueue<std::unique_ptr<Event>> event_queue; // Main event queue. Only supports Event-derived types, as Event is abstract.
                                                       // unique_ptr is used as it is not
                                                       // possible to create intances of Event
@@ -46,10 +46,10 @@ int main()
 {
     SavingsAccount s1(1, "Forbrugskonto", Cash(10000, DKK));
     SavingsAccount s2(2, "Opsparingskonto", Cash(20000, DKK));
-    SecuritiesAccount s3(1, "Aktiekonto", USD, 5000);
-    database->savingAccounts.insert(std::pair<int, SavingsAccount>{s1.getID(), s1});
-    database->savingAccounts.insert(std::pair<int, SavingsAccount>{s2.getID(), s2});
-    database->securityAccounts.insert(std::pair<int, SecuritiesAccount>{s3.getID(), s3});
+    //SecuritiesAccount<StockTransaction> s3(1, "Aktiekonto");
+    database.savingAccounts.insert(std::pair<int, SavingsAccount>{s1.getID(), s1});
+    database.savingAccounts.insert(std::pair<int, SavingsAccount>{s2.getID(), s2});
+    //database.stockAccounts.insert(std::pair<int, SecuritiesAccount<StockTransaction>>{s3.getID(), s3});
 
     // std::unique_ptr<Event> eventRequest = std::make_unique<CashTransaction>(2000, s1.getID(), s2.getID()); //wrap event object in unique_ptr
 
@@ -76,8 +76,6 @@ int main()
 
         // Client should return a Future to a list of requests, that the customer can then access 
         {
-        case 0:
-            
         case 1:
             // Get amount 
             // Enqueue a CashTransaction
@@ -88,8 +86,8 @@ int main()
 
             // Select Stock
 
-            eventRequest = std::make_unique<SecurityTransaction>(2000, s1.getID(), s2.getID()); //wrap event object in unique_ptr
-            event_queue.enqueue(std::move(eventRequest)); // move the unique_ptr of the event to the queue
+            //eventRequest = std::make_unique<SecurityTransaction>(2000, s1.getID(), s2.getID()); //wrap event object in unique_ptr
+            //event_queue.enqueue(std::move(eventRequest)); // move the unique_ptr of the event to the queue
             break;
         case 3:
             // Select Stock

@@ -1,4 +1,5 @@
 #include "Event.hpp"
+#include "Asset.hpp"
 
 class Transaction : public Event
 {
@@ -17,11 +18,13 @@ public:
     CashTransaction(int amount, int from, int to) : Transaction(from, to), amount(amount) {}
     int getTransactionAmount() { return amount; };
 
-    void createID() override {
+    void createID() override
+    {
         setID(123); // TODO: make correct implementation
     }
 
-    int getAmount() const{
+    int getAmount() const
+    {
         return amount;
     }
 
@@ -31,7 +34,8 @@ private:
 
 // Transactions requires std::constness of type -> Queue should contain * to const Events
 
-class SecurityTransaction : public Transaction {
+class SecurityTransaction : public Transaction
+{
 public:
     virtual void buyAsset() = 0;
     virtual void sellAsset() = 0;
@@ -41,15 +45,41 @@ class BondTransaction : public SecurityTransaction
 {
 private:
     std::vector<Bond> bonds;
+
+public:
+    void buyAsset() override
+    {
+    }
+    void sellAsset() override
+    {
+    }
+
+    size_t getSize() const
+    {
+        return bonds.size();
+    }
 };
 
 class StockTransaction : public SecurityTransaction
 {
 private:
     std::vector<Stock> stocks;
+
+public:
+    void buyAsset() override
+    {
+    }
+    void sellAsset() override
+    {
+    }
+    size_t getSize() const
+    {
+        return stocks.size();
+    }
 };
 
-template <typename T, typename U> 
+/*
+template <typename T, typename U>
 requires asset_is_convertible<T, U>
 class ConversionTransaction : Transaction
 {
@@ -60,8 +90,7 @@ public:
     U convert(T from, U to);
 };
 
-
-
+*/
 
 /*
     Concept til at gøre is_convertible_from_and_to et trait på alle transaktiontyper

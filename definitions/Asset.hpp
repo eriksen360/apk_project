@@ -1,5 +1,11 @@
 #include <string>
 
+enum Currency
+{
+    DKK = 0,
+    USD = 1
+};
+
 class Asset {
 private:
     int id;
@@ -31,6 +37,7 @@ public:
 
 class Cash : public Asset {
 private:
+    int foo() { return 0; };
     int amount = 0;
     const Currency currency = DKK;
 public:
@@ -49,18 +56,18 @@ public:
     }
 
     Currency getCurrency() const {
-        return currency
+        return currency;
     }
 
     // Add move constructor?
 
-}
+};
 
-
+/*
 template<typename T, typename U>
 struct is_convertible<>  {
 
-    T og U er ikke hvis T er Stock, Bond og skal til Bond, Stock
+    //T og U er ikke hvis T er Stock, Bond og skal til Bond, Stock
 }
 
 template<typename T, typename U>
@@ -75,3 +82,4 @@ struct is_convertible<Cash, Cash>  {
     // bestemte valutaer kan ikke konverteres fra og til hinanden
 }
 
+*/
