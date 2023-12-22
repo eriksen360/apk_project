@@ -1,6 +1,6 @@
 #include <chrono>
 
-class Event
+class Event  // Event should also have a move constructor since data is moved from a client to the queue
 {
 public:
     Event() : id(-1), createdAt(std::chrono::system_clock::now()) {}

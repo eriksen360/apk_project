@@ -6,7 +6,7 @@ enum Currency
     USD = 1
 };
 
-class Asset {
+class Asset {  //TODO: Asset should have a move constructor with noexcept since it should be moved between accounts
 private:
     int id;
 public:

@@ -69,7 +69,7 @@ int main()
     uint choice = 0; 
     do {
         std::cout << "Please enter action 1 (Make deposit), 2 (Buy Stock) or 3 (Sell Stock)" << std::endl;
-        std::cin >> choice;
+        std::cin >> choice;  // TODO: Exception to handle invalid arguments
 
         switch (choice) // Assumes that Client (this) has no access to Accounts for now, so any mistake will be handled silently
         // in the respective thread.
