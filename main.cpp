@@ -52,11 +52,20 @@ void SecurityTransactionThreadFunction() {
             // Handle Transaction
             //  Should confirm that savingsAccount exist
 
-            SavingsAccount savingsAccount = database.getSavingsAccount(transaction->getFromAccountID());
-            if (typeid(transaction) == StockTransaction) {
-                SecuritiesAccount<Stock> securitiesAccount = database.getStockAccount(transaction->getToAccountID());
-                securitiesAccount.addAsset(transaction->);
+            // Mutex for each account type
+            {
+                std::scoped_lock<std::mutex> lock(databaseSavingsAccountsMutex);
+                SavingsAccount savingsAccount = database.getSavingsAccount(transaction->getFromAccountID());
+            }
 
+            // Place locks around database access.
+            if (typeid(transaction) == StockTransaction) {
+                
+                {
+                    std::scoped_lock<std::mutex> lock(databaseSavingsAccountsMutex);
+                    SecuritiesAccount<Stock> securitiesAccount = database.getStockAccount(transaction->getToAccountID());
+                    securitiesAccount.addAsset(transaction->);
+                }
             // Should withdraw amount from savingsAccount and buy stocks with it if enough funds.
             } else {
                 SecuritiesAccount<Bond> securitiesAccount = database.getBondAccount(transaction->getToAccountID());

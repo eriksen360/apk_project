@@ -99,6 +99,10 @@ private:
     std::vector<Security> securities;
 };
 
+mutable std::mutex databaseSavingsAccountsMutex; // mutable allows the mutex to be used in const functions
+mutable std::mutex databaseStockAccountsMutex; // mutable allows the mutex to be used in const functions
+mutable std::mutex databaseBondAccountsMutex; // mutable allows the mutex to be used in const functions
+
 struct DatabaseMock
 { // TODO: Use UIID keys
     std::unordered_map<int, SavingsAccount> savingAccounts;
