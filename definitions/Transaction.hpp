@@ -13,6 +13,9 @@ public:
     Transaction(int to, int from) : Event(), toAccountId(to), fromAccountId(from) {};
     Transaction(int to) : Event(), toAccountId(to), fromAccountId(0) {};
     virtual ~Transaction(){};
+    virtual getToAccount() {
+        // Virtual, as the transaction type should be able to return the account it is to
+    }
 
 private:
     int toAccountId;
