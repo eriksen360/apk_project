@@ -10,29 +10,47 @@ class Asset {  //TODO: Asset should have a move constructor with noexcept since 
 private:
     int id;
 public:
-    virtual int foo() = 0;
     Asset() {};
     virtual ~Asset() {};
 };
 
-class Security : public Asset {
+const class Security : public Asset {
 public:
     Security() {};
     virtual ~Security() {};
+    virtual void print() const = 0;
 };
 
-class Bond : public Security {
+const class Bond : public Security {
 public:
-    int foo() { return 0; };
     Bond() {};
     ~Bond() {};
+    void print() const {
+        std::cout << "Bond" << std::endl;
+    }
 };
 
-class Stock : public Security {
+const static std::unordered_map<std::string, Stock> availableStocks = {
+    {"AMD", Stock()},
+    {"AAPL", Stock()},
+    {"GOOG", Stock()},
+    {"MSFT", Stock()}
+};
+
+const class Stock : public Security {
 public:
-    int foo() { return 0; };
     Stock() {};
     ~Stock() {};
+    void print() const {
+        std::cout << "Stock" << std::endl;
+    }
+};
+
+const static std::unordered_map<std::string, Bond> availableBonds = {
+    {"10Y US Treasury", Bond()},
+    {"30Y US Treasury", Bond()},
+    {"10Y Danish Treasury", Bond()},
+    {"30Y Danish Treasury", Bond()}
 };
 
 class Cash : public Asset {

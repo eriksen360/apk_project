@@ -1,21 +1,29 @@
 #include "Event.hpp"
 #include "Asset.hpp"
 
+enum TransactionType {
+    BUY = 0,
+    SELL = 1,
+    CONVERT = 2
+}
+
 class Transaction : public Event
 {
 public:
-    Transaction(int from, int to) : Event(), fromAccountId(from), toAccountId(to) {}
+    Transaction(int to, int from) : Event(), toAccountId(to), fromAccountId(from) {};
+    Transaction(int to) : Event(), toAccountId(to), fromAccountId(0) {};
     virtual ~Transaction(){};
 
 private:
-    int fromAccountId;
     int toAccountId;
+    int fromAccountId;
 };
 
 class CashTransaction : public Transaction
 {
 public:
-    CashTransaction(int amount, int from, int to) : Transaction(from, to), amount(amount) {}
+    CashTransaction(int amount, int to, int from) : Transaction(to, from), amount(amount) {}
+    CashTransaction(int amount, int to) : Transaction(to), amount(amount) {}
     int getTransactionAmount() { return amount; };
 
     void createID() override
@@ -37,46 +45,55 @@ private:
 class SecurityTransaction : public Transaction
 {
 public:
-    virtual void buyAsset() = 0;
-    virtual void sellAsset() = 0;
+    SecurityTransaction(int to, int from) : Transaction(to, from) {};
 };
 
 class BondTransaction : public SecurityTransaction
 {
 private:
     std::vector<Bond> bonds;
-
+    TransactionType type;
 public:
-    void buyAsset() override
+    BondTransaction(int to, int from, std::vector<Bond>& bonds, TransactionType type)
+    : SecurityTransaction(to, from), bonds(std::move(bonds)), type(type) {}
+
+    TransactionType getType() const
     {
-    }
-    void sellAsset() override
-    {
+        return type;
     }
 
     size_t getSize() const
     {
         return bonds.size();
     }
+
+    ~BondTransaction() override {}
 };
 
 class StockTransaction : public SecurityTransaction
 {
 private:
     std::vector<Stock> stocks;
-
+    TransactionType type;
 public:
-    void buyAsset() override
+    StockTransaction(int to, int from, std::vector<Stock>& stocks, TransactionType type)
+    : SecurityTransaction(to, from), stocks(std::move(stocks)), type(type) {}
+
+    TransactionType getType() const
     {
+        return type;
     }
-    void sellAsset() override
-    {
-    }
+
     size_t getSize() const
     {
         return stocks.size();
     }
+
+    ~StockTransaction() override {}
 };
+
+class ConversionTransaction : public Transaction
+{};
 
 /*
 template <typename T, typename U>

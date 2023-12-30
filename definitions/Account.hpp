@@ -10,7 +10,7 @@ template <typename T>
 class Account
 {
 public:
-    Account(int id, std::string name) : id(id), name(std::move(name)) {}
+    Account(int id, std::string name, std::string userEmail) : id(id), name(std::move(name)), userEmail(userEmail) {}
 
     virtual void print() = 0;
 
@@ -24,22 +24,28 @@ public:
         return id;
     }
 
-    virtual std::string getName() const
+    std::string getName() const
     {
         return name;
+    }
+
+    std::string getUserEmail() const 
+    {
+        return userEmail;
     }
 
 private:
     int id;
     std::string name;
+    std::string userEmail;
     std::vector<T> transactions;
 };
 
 class SavingsAccount : public Account<CashTransaction>
 {
 public:
-    SavingsAccount(int id, std::string name, Cash cash)
-        : Account<CashTransaction>(id, std::move(name)), cash(cash) {} // TODO: See exmaple in slides for std::moving own object
+    SavingsAccount(int id, std::string name, std::string userEmail, Cash cash)
+        : Account<CashTransaction>(id, std::move(name), userEmail), cash(cash) {} // TODO: See exmaple in slides for std::moving own object
 
     int getAmount() const
     {
@@ -63,7 +69,7 @@ public:
 
     void print() override
     {
-        std::cout << "Type: Savingsaccount\n"
+        std::cout << "Type: Savings Account\n"
                   << "ID: " << this->getID() << '\n'
                   << "Name: " << this->getName() << '\n'
                   << "Amount: " << getAmount() << "\n\n";
@@ -77,14 +83,14 @@ template <typename T> // concept til at tjekke for stock eller bond
 class SecuritiesAccount : public Account<T>
 {
 public:
-    SecuritiesAccount(int id, std::string name)
-        : Account<T>(id, std::move(name)) {}
+    SecuritiesAccount(int id, std::string name, std::string userEmail)
+        : Account<T>(id, std::move(name), userEmail) {}
 
     ~SecuritiesAccount(){};
 
     void print() override
     {
-        std::cout << "Type: Securitiesaccount\n"
+        std::cout << "Type: Securities Account\n"
                   << "ID: " << this->getID() << '\n'
                   << "Name: " << this->getName() << "\n\n";
     }
@@ -96,8 +102,20 @@ private:
 struct DatabaseMock
 { // TODO: Use UIID keys
     std::unordered_map<int, SavingsAccount> savingAccounts;
-    //std::unordered_map<int, SecuritiesAccount<StockTransaction>> stockAccounts;
-    //std::unordered_map<int, SecuritiesAccount<BondTransaction>> bondAccounts;
+    std::unordered_map<int, SecuritiesAccount<Stock>> stockAccounts;
+    std::unordered_map<int, SecuritiesAccount<Bond>> bondAccounts;
+
+    bool accountExistsFor(std::string userEmail) {
+
+        // Use iterator + algorithm to find account in any of the maps
+    }
+
+    void displayAccountsFor(std::string userEmail) {
+
+        // Use iterator + algorithm to find account in any of the maps
+        // Call .print() on each account
+    }
+
 };
 
 // // You should not be able to make a strockTransaction if you

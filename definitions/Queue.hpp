@@ -52,6 +52,11 @@ public:
         return value;
     }
 
+    size_t size() {
+        std::scoped_lock<std::mutex> lock(mtx);
+        return queue.size();
+    }
+
     ~EventMessageQueue(){};
 
 private:
