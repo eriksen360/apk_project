@@ -10,23 +10,23 @@ enum TransactionType {
 class Transaction : public Event
 {
 public:
-    Transaction(int to, int from) : Event(), toAccountId(to), fromAccountId(from) {};
-    Transaction(int to) : Event(), toAccountId(to), fromAccountId(0) {};
+    Transaction(intstd::string to, istd::stringnt from) : Event(), toAccountId(to), fromAccountId(from) {};
+    Transaction(std::string to) : Event(), toAccountId(to), fromAccountId(0) {};
     virtual ~Transaction(){};
     virtual getToAccount() {
         // Virtual, as the transaction type should be able to return the account it is to
     }
 
 private:
-    int toAccountId;
-    int fromAccountId;
+    std::string toAccountEmail;
+    std::string fromAccountEmal;
 };
 
 class CashTransaction : public Transaction
 {
 public:
-    CashTransaction(int amount, int to, int from) : Transaction(to, from), amount(amount) {}
-    CashTransaction(int amount, int to) : Transaction(to), amount(amount) {}
+    CashTransaction(int amount, std::string to, std::string from) : Transaction(to, from), amount(amount) {}
+    CashTransaction(int amount, std::string to) : Transaction(to), amount(amount) {}
     int getTransactionAmount() { return amount; };
 
     void createID() override

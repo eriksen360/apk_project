@@ -58,24 +58,28 @@ void SecurityTransactionThreadFunction() {
                 SavingsAccount savingsAccount = database.getSavingsAccount(transaction->getFromAccountID());
             }
 
+            try {
             // Place locks around database access.
             if (typeid(transaction) == StockTransaction) {
                 
                 {
                     std::scoped_lock<std::mutex> lock(databaseSavingsAccountsMutex);
                     SecuritiesAccount<Stock> securitiesAccount = database.getStockAccount(transaction->getToAccountID());
+                    SecuritiesAccount<Stock> securitiesAccountCopy = std::deep_copy(securitiesAccount);
                     securitiesAccount.addAsset(transaction->);
                 }
             // Should withdraw amount from savingsAccount and buy stocks with it if enough funds.
             } else {
                 SecuritiesAccount<Bond> securitiesAccount = database.getBondAccount(transaction->getToAccountID());
             }
+            } catch (std::exception& e) {
+                securitiesAccount = securitiesAccountCopy
+            }
 
             // Strong guarantee exception here if addAsset fails, we should not deduct amount but nothing should happen
 
             savingsAccount.removeAmount(transaction->getAmount());
-
-            // Move transaction to appropriate account to log it.
+            SecuritiesAccount.addToTransactionLog(transaction);
         }
     }
 }
@@ -145,7 +149,7 @@ int main()
 
     char choice = 0; 
     do {
-        std::cout << "Please enter action 1 (Make deposit), 2 (Buy Stock) or 3 (Sell Stock)" << std::endl;
+        std::cout << "Please enter action 1 (Make deposit), 2 (Withdraw), 3 (Trade Stocks), 4 (Trade Bonds), 5 (Convert Assets), 6 (Show accounts)" << std::endl;
         try {
             std::cin.ignore();
             std::cin >> choice;  // TODO: Exception to handle invalid arguments
@@ -159,67 +163,84 @@ int main()
             choice = 0;
         }
 
+        int amount = 0;
         switch (choice) // Assumes that Client (this) has no access to Accounts for now, so any mistake will be handled silently
         // in the respective thread. Client should return a Future to a list of requests, that the customer can then access 
         {
-        case 1:
-            eventRequest = std::make_unique<CashTransaction>(2000, s1.getID()); //wrap event object in unique_ptr
+        case 1: // Make deposit
+            std::cout << "Please enter amount to deposit: ";
+            std::cin >> amount;
+            eventRequest = std::make_unique<CashTransaction>(amount, userEmail); //wrap event object in unique_ptr
             event_queue.enqueue(std::move(eventRequest)); // move the unique_ptr of the event to the queue
             break;
 
-            // Make deposit
-        case 2:
-            eventRequest = std::make_unique<CashTransaction>(-2000, s1.getID()); //wrap event object in unique_ptr
+        case 2: // Withdraw amount
+            std::cout << "Please enter amount to withdraw: ";
+            std::cin >> amount;
+            eventRequest = std::make_unique<CashTransaction>(amount, userEmail); //wrap event object in unique_ptr
             event_queue.enqueue(std::move(eventRequest)); // move the unique_ptr of the event to the queue
             break;
-            // Withdraw cash
-            break;
-        case 3:
-
-            // Select stock
+        case 3: // Buy|Sell Stocks
+            std::string stockName;
             for (auto &stock : availableStocks) {
                 stock.second.print();
             }
-            Stock* stock = new Stock(); // We assume that stocks can be "created" to a start
-            const int amount = 4;
-            eventRequest = std::make_unique<StockTransaction>(stock, amount, TransactionType::BUY); //wrap event object in unique_ptr
+            do {
+                std::cout << "\nPlease enter stock name: ";
+                std::cin >> stockName;
+            } while(!availableStocks.contains(stockName));
+            std::cout << "Please enter amount to buy: ";
+            std::cin >> amount;
+
+            std::string transactionTypeStr;
+            TransactionType transactionType;
+            do {
+                std::cout << "\nPlease enter what to do with stock (SELL/BUY): ";
+                std::cin >> transactionTypeStr;
+                transactionType = TransactionType::BUY ? transactionTypeStr == "BUY" : transactionTypeStr == "SELL";
+            } while(transactionType != TransactionType::BUY || transactionType != TransactionType::SELL);
+
+            Stock* stock = new std::deep_copy(availableStocks[stockName]);
+            eventRequest = std::make_unique<StockTransaction>(stock, amount, transactionType); //wrap event object in unique_ptr
             event_queue.enqueue(std::move(eventRequest)); // move the unique_ptr of the event to the queue
             break;
-        case 4:
-            Stock* stock = new Stock();
-            const int amount = 4;
-            eventRequest = std::make_unique<StockTransaction>(stock, amount, TransactionType::SELL); //wrap event object in unique_ptr
+        case 4: // Buy|Sell Bonds
+            std::string bondName;
+            for (auto &bond : availableBonds) {
+                bond.second.print();
+            }
+            do {
+                std::cout << "\nPlease enter bond name: ";
+                std::cin >> bondName;
+            } while(!availableBonds.contains(bondName));
+            std::cout << "Please enter amount to buy: ";
+            std::cin >> amount;
+
+            std::string transactionTypeStr;
+            TransactionType transactionType;
+            do {
+                std::cout << "\nPlease enter what to do with bond (SELL/BUY): ";
+                std::cin >> transactionTypeStr;
+                transactionType = TransactionType::BUY ? transactionTypeStr == "BUY" : transactionTypeStr == "SELL";
+            } while(transactionType != TransactionType::BUY || transactionType != TransactionType::SELL);
+
+            Bond* bond = new std::deep_copy(availableBonds[bondName]);
+            eventRequest = std::make_unique<BondTransaction>(bond, amount, transactionType); //wrap event object in unique_ptr
             event_queue.enqueue(std::move(eventRequest)); // move the unique_ptr of the event to the queue
             break;
         case 5:
-            // Select Bond
-            
-            const int amount = 4;
-            std::vector<Bond> bonds = {Bond(), Bond(), Bond(), Bond()};
-            
-            eventRequest = std::make_unique<BondTransaction>(&bonds, TransactionType::BUY); //wrap event object in unique_ptr
-            event_queue.enqueue(std::move(eventRequest)); // move the unique_ptr of the event to the queue
             break;
-        case 6:
-            Bond* bond = new Bond(); // Move entity
-            const int amount = 4;
-            eventRequest = std::make_unique<BondTransaction>(bond, amount, TransactionType::SELL); //wrap event object in unique_ptr
-            event_queue.enqueue(std::move(eventRequest)); // move the unique_ptr of the event to the queue
-            break;
-        case 7:
-
             // Select convertFrom
             // Select convertTo and desiredAmount
             
-            if (cash && cash) {
-                eventRequest = std::make_unique<CashTransaction>(-2000, s1.getID(), s2.getID());
-                event_queue.enqueue(std::move(eventRequest)); 
-            }
+            //if (cash && cash) {
+            //    eventRequest = std::make_unique<CashTransaction>(-2000, s1.getID(), s2.getID());
+            //    event_queue.enqueue(std::move(eventRequest)); 
+            //}
 
             //eventRequest = std::make_unique<ConversionTransaction<FromType, ToType>(desiredAmount, TransactionType::CONVERT); //wrap event object in unique_ptr
             //event_queue.enqueue(std::move(eventRequest)); // move the unique_ptr of the event to the queue
-            
-        case 8: 
+        case 6: 
             database.displayAccountsFor(userEmail);
             break;
         default:
