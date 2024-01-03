@@ -239,7 +239,7 @@ int main()
             event_queue.enqueue(std::move(eventRequest));                                 // move the unique_ptr of the event to the queue
             break;
         }
-        /*case 3: // Buy|Sell Stocks
+        case 3: // Buy|Sell Stocks
             std::string stockName;
             for (auto &stock : availableStocks)
             {
@@ -259,10 +259,17 @@ int main()
             {
                 std::cout << "\nPlease enter what to do with stock (SELL/BUY): ";
                 std::cin >> transactionTypeStr;
-                transactionType = TransactionType::BUY ? transactionTypeStr == "BUY" : transactionTypeStr == "SELL";
+                if (transactionTypeStr == "BUY") {
+                    transactionType = TransactionType::BUY;
+                }
+                else if (transactionTypeStr == "SELL") {
+                    transactionType = TransactionType::SELL;
+                }
             } while (transactionType != TransactionType::BUY || transactionType != TransactionType::SELL);
 
-            Stock *stock = new std::deep_copy(availableStocks[stockName]);
+            std::cout << transactionTypeStr << " " << stockName << " " << amount << std::endl;
+
+            /* Stock *stock = new std::deep_copy(availableStocks[stockName]);
             eventRequest = std::make_unique<StockTransaction>(stock, amount, transactionType); // wrap event object in unique_ptr
             event_queue.enqueue(std::move(eventRequest));                                      // move the unique_ptr of the event to the queue
             break;*/
