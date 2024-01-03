@@ -2,6 +2,9 @@
 #include <string>
 #include <chrono>
 #include <unordered_map>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 enum Currency
 {
@@ -11,11 +14,8 @@ enum Currency
 
 class Asset
 { // TODO: Asset should have a move constructor with noexcept since it should be moved between accounts
-private:
-    int id;
-
 public:
-    Asset(){};
+    Asset() {};
     Asset(const Asset &) = default;
     Asset(Asset &&) noexcept = default;
     Asset &operator=(const Asset &) = default;
@@ -26,7 +26,7 @@ public:
 class Security : public Asset
 {
 private:
-    int assetId;
+    boost::uuids::uuid id;
     std::string name;
     double buyPrice;
     double currentPrice;
@@ -36,13 +36,20 @@ private:
 
 public:
     Security(std::string name, double buyPrice, double currentPrice, double sellPrice)
-        : name(name), buyPrice(buyPrice), currentPrice(currentPrice), sellPrice(sellPrice){};
+        : name(name), buyPrice(buyPrice), currentPrice(currentPrice), sellPrice(sellPrice) {
+            boost::uuids::random_generator gen;
+            boost::uuids::uuid _id = gen();
+            id = _id;
+        };
     Security(const Security &) = default;
     Security(Security &&) noexcept = default;
     Security &operator=(const Security &) = default;
     Security &operator=(Security &&) noexcept = default;
     virtual ~Security() = default;
     virtual void print() const = 0;
+    std::string getName() const {
+        return name;
+    }
     double getBuyPrice() const
     {
         return buyPrice;
@@ -63,6 +70,9 @@ public:
     {
         soldAt = std::chrono::system_clock::now();
     }
+    boost::uuids::uuid getId() const {
+        return id;
+    }
 };
 
 class Bond : public Security
@@ -74,6 +84,7 @@ public:
     void print() const
     {
         std::cout << "Bond" << std::endl;
+        std::cout << "Name: " << this->getName() << std::endl;
         std::cout << "Purchase price: " << this->getBuyPrice() << std::endl;
         std::cout << "Current price: " << this->getCurrentPrice() << std::endl;
         std::cout << "Selling price: " << this->getSellPrice() << std::endl;
@@ -89,6 +100,7 @@ public:
     void print() const
     {
         std::cout << "Stock" << std::endl;
+        std::cout << "Name: " << this->getName() << std::endl;
         std::cout << "Purchase price: " << this->getBuyPrice() << std::endl;
         std::cout << "Current price: " << this->getCurrentPrice() << std::endl;
         std::cout << "Selling price: " << this->getSellPrice() << std::endl;

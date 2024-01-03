@@ -19,7 +19,7 @@ namespace bank {
 
         virtual void print() = 0;
 
-        virtual void addToTransactionLog(T& t)
+        virtual void addToTransactionLog(T t)
         {
             transactions.push_back(std::move(t));
         }
@@ -85,7 +85,7 @@ namespace bank {
         Cash cash; // overload operation med concept til at specificere at currency matcher cash.currency
     };
 
-    template <typename T> // concept til at tjekke for stock eller bond
+    template <typename T, typename A> // concept til at tjekke for stock eller bond, og concept til at tjekke for at T er en bestemt tranaktionstype
     class SecuritiesAccount : public Account<T>
     {
     public:
@@ -94,22 +94,34 @@ namespace bank {
 
         ~SecuritiesAccount(){};
 
-
-
         void print() override
         {
             std::cout << "Type: Securities Account\n"
                     << "ID: " << this->getID() << '\n'
-                    << "Name: " << this->getName() << "\n\n";
+                    << "Name: " << this->getName() << "\n\n"
+                    << "Email: " << this->getUserEmail() << '\n'
+                    << "Total asset value: " << getTotalAssetValue() << '\n'
+                    << "Mean asset value: " << getMeanAssetValue() << '\n';
         }
 
-        void addSecurity(std::unique_ptr<Security> security)
+        void addSecurity(A& security)
         {
             securities.push_back(std::move(security));
         }
 
+        double getTotalAssetValue() {
+            // Implement iterator for summation
+            return 0.0;
+        }
+
+        double getMeanAssetValue() const {
+            // Implement algorithm for calculating
+            return 0.0;
+        }
+
     private:
-        std::vector<std::unique_ptr<Security>> securities;
+        std::vector<A*> securities;
+        // std::vector<unique_ptr<A>> securities;  <--- Det her er den ikke glad for, fordi typen A ikke er deducable 
     };
 
     // // You should not be able to make a strockTransaction if you
@@ -183,8 +195,8 @@ struct DatabaseMock {
         are a significant amount of accounts.
     */
     std::unordered_map<std::string, bank::SavingsAccount> savingsAccounts;
-    std::unordered_map<std::string, bank::SecuritiesAccount<Stock>> stockAccounts;
-    std::unordered_map<std::string, bank::SecuritiesAccount<Bond>> bondAccounts;
+    std::unordered_map<std::string, bank::SecuritiesAccount<StockTransaction, Stock>> stockAccounts;
+    std::unordered_map<std::string, bank::SecuritiesAccount<BondTransaction, Bond>> bondAccounts;
 
     bool accountExistsFor(std::string userEmail)
     {
@@ -207,18 +219,18 @@ struct DatabaseMock {
             savingsElement->second.print();
         }
 
-       /* auto stockElement = this->stockAccounts.find(userEmail);
-        if (stockElement != this->savingsAccounts.end()) {
+        auto stockElement = this->stockAccounts.find(userEmail);
+        if (stockElement != this->stockAccounts.end()) {
             stockElement->second.print();
         }
 
         auto bondElement = this->bondAccounts.find(userEmail);
-        if (bondElement != this->savingsAccounts.end()) {
+        if (bondElement != this->bondAccounts.end()) {
             bondElement->second.print();
-        } */
+        }
     }
 
-    bank::SavingsAccount* getSavingsAccountsFor(std::string userEmail) {
+    bank::SavingsAccount* getSavingsAccountFor(std::string userEmail) {
         auto element = this->savingsAccounts.find(userEmail);
         if (element != this->savingsAccounts.end()) {
             return &(element->second);
@@ -226,7 +238,7 @@ struct DatabaseMock {
         return nullptr;
     }
 
-    bank::SecuritiesAccount<Stock>* getStockAccountsFor(std::string userEmail) {
+    bank::SecuritiesAccount<StockTransaction, Stock>* getStockAccountFor(std::string userEmail) {
         auto element = this->stockAccounts.find(userEmail);
         if (element != this->stockAccounts.end()) {
             return &(element->second);
@@ -234,7 +246,7 @@ struct DatabaseMock {
         return nullptr;
     }
 
-    bank::SecuritiesAccount<Bond>* getBondAccountsFor(std::string userEmail) {
+    bank::SecuritiesAccount<BondTransaction, Bond>* getBondAccountFor(std::string userEmail) {
         auto element = this->bondAccounts.find(userEmail);
         if (element != this->bondAccounts.end()) {
             return &(element->second);

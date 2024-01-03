@@ -22,6 +22,7 @@ void cashTransactionThreadFunction()
             std::cout << "CASH TYPE: " << event_queue.size() << std::endl;
             std::unique_ptr<Event> event = event_queue.dequeue(); // get the event
             auto cashTransaction = static_cast<CashTransaction *>(event.get()); // cast to Cashtransaction
+            // auto cashTransactionPtr = std::unique_ptr<CashTransaction>(*cashTransaction); // wrap in unique_ptr
 
             int amount = cashTransaction->getAmount();
             std::string toEmail = cashTransaction->getToAccount();
@@ -30,8 +31,8 @@ void cashTransactionThreadFunction()
             std::cout << "Transfer " << amount << " to " << toEmail << " from " << fromEmail << std::endl;
 
             std::scoped_lock<std::mutex> lock(databaseSavingsAccountsMutex);
-            bank::SavingsAccount* toAccount = database.getSavingsAccountsFor(toEmail);
-            bank::SavingsAccount* fromAccount = database.getSavingsAccountsFor(fromEmail);
+            bank::SavingsAccount* toAccount = database.getSavingsAccountFor(toEmail);
+            bank::SavingsAccount* fromAccount = database.getSavingsAccountFor(fromEmail);
             if (toAccount != nullptr)
             {
                 if (fromAccount != nullptr)
@@ -77,23 +78,56 @@ void cashTransactionThreadFunction()
 
 void SecurityTransactionThreadFunction()
 {
-
+    std::string _type = "NONE";
+    SecurityTransaction* transaction;
     for (;;)
     {
-
-        if (event_queue.frontIsOfType(typeid(SecurityTransaction)))
+        if (!event_queue.frontIsOfType(typeid(StockTransaction)) && !event_queue.frontIsOfType(typeid(BondTransaction)))
         {
-            std::cout << "SECURITY TYPE in QUEUE: " << event_queue.size() << std::endl;
+            continue;
+        }
+        else if (event_queue.frontIsOfType(typeid(StockTransaction)))
+        {
+            _type = "STOCK";
+            std::cout << "Stock Type in Queue: " << event_queue.size() << std::endl;
             std::unique_ptr<Event> event = event_queue.dequeue(); // Should move object
-            SecurityTransaction *transaction = static_cast<SecurityTransaction *>(event.get());
+            StockTransaction *transaction = static_cast<StockTransaction *>(event.get());
+            std::scoped_lock<std::mutex> stockAccountLock(databaseStockAccountsMutex);
+            bank::SecuritiesAccount<StockTransaction, Stock>* securityAccount = database.getStockAccountFor(transaction->getToAccount());
+            
+            std::scoped_lock<std::mutex> savingsAccountLock(databaseSavingsAccountsMutex);
+            bank::SavingsAccount* savingsAccount = database.getSavingsAccountFor(transaction->getToAccount());
+            if (savingsAccount == nullptr) {
+                std::cout << "No savings account found for user. Cannot withdraw/deposit funds made by selling/buying stocks." << std::endl;
+                continue; // lock released by exiting scope of loop.
+            }
 
-            // Handle Transaction
-            //  Should confirm that savingsAccount exist
+            // Check if funds are available
+            // If available purchase stocks, deduct amount (with strong guarantee) and add them to securitiesAccount
+            // Add to transaction log
+        }
+        else if (event_queue.frontIsOfType(typeid(BondTransaction)))
+        {
+            _type = "BOND";
+            std::cout << "Bond Type in Queue: " << event_queue.size() << std::endl;
+            std::unique_ptr<Event> event = event_queue.dequeue(); // Should move object
+            BondTransaction *transaction = static_cast<BondTransaction *>(event.get());
+            std::scoped_lock<std::mutex> bondAccountLock(databaseBondAccountsMutex);
+            bank::SecuritiesAccount<BondTransaction, Bond>* securityAccount = database.getBondAccountFor(transaction->getToAccount());
+            
+            std::scoped_lock<std::mutex> savingsAccountLock(databaseSavingsAccountsMutex);
+            bank::SavingsAccount* savingsAccount = database.getSavingsAccountFor(transaction->getToAccount());
+            if (savingsAccount == nullptr) {
+                std::cout << "No savings account found for user. Cannot withdraw/deposit funds made by selling/buying stocks." << std::endl;
+                continue; // lock released by exiting scope of loop.
+            }
 
-            // Mutex for each account type
-            //{
-            //    std::scoped_lock<std::mutex> lock(databaseSavingsAccountsMutex);
-            //    SavingsAccount savingsAccount = database.getSavingsAccount(transaction->getFromAccountID());
+            // Check if funds are available
+            // If available purchase stocks, deduct amount (with strong guarantee) and add them to securitiesAccount
+            // Add to transaction log
+        }
+        
+            // -----------------------------------------------------------------------------
             //}
             /*
                         try
@@ -125,7 +159,7 @@ void SecurityTransactionThreadFunction()
                         savingsAccount.removeAmount(transaction->getAmount());
                         securitiesAccount.addToTransactionLog(transaction);
                         */
-        }
+        
     }
 }
 
@@ -153,10 +187,10 @@ int main()
     database.savingsAccounts.emplace(s1.getUserEmail(), std::move(s1));
     database.savingsAccounts.emplace(s2.getUserEmail(), std::move(s2));
 
-    /* SecuritiesAccount<Stock> s3(1, "Aktiekonto", "a.jensen@gmail.com");
-     bank::SecuritiesAccount<Stock> s4(2, "Aktiekonto", "b.hansen@gmail.com");
-     database.stockAccounts.emplace(s3.getID(), std::move(s3));
-     database.stockAccounts.emplace(s4.getID(), std::move(s4));
+    bank::SecuritiesAccount<StockTransaction, Stock> s3(1, "Aktiekonto", "a.jensen@gmail.com");
+    // bank::SecuritiesAccount<Stock> s4(2, "Aktiekonto", "b.hansen@gmail.com");
+    database.stockAccounts.emplace(s3.getUserEmail(), std::move(s3));
+    /* database.stockAccounts.emplace(s4.getID(), std::move(s4));
 
      bank::SecuritiesAccount<Bond> s5(1, "Obligationskonto", "a.jensen@gmail.com");
      bank::SecuritiesAccount<Bond> s6(2, "Obligationskonto", "b.hansen@gmail.com");
@@ -176,6 +210,11 @@ int main()
     // s2.print();
 
     for (auto x : database.savingsAccounts)
+    {
+        x.second.print();
+    }
+
+    for (auto x : database.stockAccounts)
     {
         x.second.print();
     }
@@ -239,7 +278,8 @@ int main()
             event_queue.enqueue(std::move(eventRequest));                                 // move the unique_ptr of the event to the queue
             break;
         }
-        case 3: // Buy|Sell Stocks
+        case '3': // Buy|Sell Stocks
+        {
             std::string stockName;
             for (auto &stock : availableStocks)
             {
@@ -265,14 +305,19 @@ int main()
                 else if (transactionTypeStr == "SELL") {
                     transactionType = TransactionType::SELL;
                 }
-            } while (transactionType != TransactionType::BUY || transactionType != TransactionType::SELL);
-
-            std::cout << transactionTypeStr << " " << stockName << " " << amount << std::endl;
-
-            /* Stock *stock = new std::deep_copy(availableStocks[stockName]);
-            eventRequest = std::make_unique<StockTransaction>(stock, amount, transactionType); // wrap event object in unique_ptr
+            } while (transactionType != TransactionType::SELL && transactionType != TransactionType::BUY);
+            std::cout << transactionTypeStr << amount << " " << stockName << " stocks." << std::endl;
+            
+            auto stockElem = availableStocks.find(stockName);
+            if (stockElem == availableStocks.end()) {
+                std::cout << "Stock not found." << std::endl;
+                break;
+            }
+            Stock stock = stockElem->second;
+            std::cout << "id: " << stock.getId() << std::endl;
+            eventRequest = std::make_unique<StockTransaction>(userEmail, stock, amount, transactionType); // wrap event object in unique_ptr
             event_queue.enqueue(std::move(eventRequest));                                      // move the unique_ptr of the event to the queue
-            break;*/
+            break;
         /*case 4: // Buy|Sell Bonds
             std::string bondName;
             for (auto &bond : availableBonds)
@@ -313,9 +358,12 @@ int main()
             // eventRequest = std::make_unique<ConversionTransaction<FromType, ToType>(desiredAmount, TransactionType::CONVERT); //wrap event object in unique_ptr
             // event_queue.enqueue(std::move(eventRequest)); // move the unique_ptr of the event to the queue
             */
-        case 6:
+        }
+        case '6':
+        {
             database.displayAccountsFor(userEmail);
             break;
+        }
         default:
             break;
         }

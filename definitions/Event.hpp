@@ -8,12 +8,12 @@ public:
 
     virtual void createID() = 0;
 
-    std::chrono::_V2::system_clock::time_point getCreatedAt()
+    std::chrono::_V2::system_clock::time_point getCreatedAt() const
     {
         return createdAt;
     };
 
-    virtual int getEventId()
+    int getEventId() const
     {
         return id;
     };

@@ -26,6 +26,11 @@ public:
         return fromAccountEmail;
     }
 
+    void createID() override
+    {
+        setID(123); // TODO: make correct implementation
+    }
+
 private:
     std::string toAccountEmail;
     std::string fromAccountEmail;
@@ -37,11 +42,6 @@ public:
     CashTransaction(int amount, std::string to, std::string from) : Transaction(to, from), amount(amount) {}
     CashTransaction(int amount, std::string to) : Transaction(to), amount(amount) {}
     int getTransactionAmount() { return amount; };
-
-    void createID() override
-    {
-        setID(123); // TODO: make correct implementation
-    }
 
     int getAmount() const
     {
@@ -56,24 +56,25 @@ private:
 
 class SecurityTransaction : public Transaction
 {
+private:
+    TransactionType type;
 public:
-    SecurityTransaction(std::string to, std::string from) : Transaction(to, from){};
+    SecurityTransaction(std::string toEmail, TransactionType _type) : Transaction(toEmail), type(_type) {};
+    TransactionType getType() const
+    {
+        return type;
+    }
 };
 
 class BondTransaction : public SecurityTransaction
 {
 private:
     std::vector<Bond> bonds;
-    TransactionType type;
-
 public:
-    BondTransaction(std::string to, std::string from, std::vector<Bond> &bonds, TransactionType type)
-        : SecurityTransaction(to, from), bonds(std::move(bonds)), type(type) {}
-
-    TransactionType getType() const
-    {
-        return type;
-    }
+    BondTransaction(std::string toEmail, Bond bond, int amount, TransactionType _type)
+        : SecurityTransaction(toEmail, _type) {
+            // Add amount of bonds to bonds;
+        }
 
     size_t getSize() const
     {
@@ -87,16 +88,11 @@ class StockTransaction : public SecurityTransaction
 {
 private:
     std::vector<Stock> stocks;
-    TransactionType type;
-
 public:
-    StockTransaction(std::string to, std::string from, std::vector<Stock> &stocks, TransactionType type)
-        : SecurityTransaction(to, from), stocks(std::move(stocks)), type(type) {}
-
-    TransactionType getType() const
-    {
-        return type;
-    }
+    StockTransaction(std::string toEmail, Stock stock, int amount, TransactionType _type)
+        : SecurityTransaction(toEmail, _type) {
+             // Add amount of stocks to stocks;
+        }
 
     size_t getSize() const
     {
