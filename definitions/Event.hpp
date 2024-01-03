@@ -1,3 +1,4 @@
+#pragma once
 #include <chrono>
 
 class Event  // Event should also have a move constructor since data is moved from a client to the queue

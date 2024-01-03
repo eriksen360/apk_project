@@ -8,7 +8,7 @@
 #include <memory>
 
 DatabaseMock database;
-EventMessageQueue<std::unique_ptr<Event>> event_queue; // Main event queue. Only supports Event-derived types, as Event is abstract.
+bank::EventMessageQueue<std::unique_ptr<Event>> event_queue; // Main event queue. Only supports Event-derived types.
                                                        // unique_ptr is used as it is not
                                                        // possible to create intances of Event
                                                        // because it is abstract
@@ -17,11 +17,11 @@ void cashTransactionThreadFunction()
 {
     for (;;)
     {
-        if (event_queue.frontIsOfType(typeid(CashTransaction)))
+        if (event_queue.frontIsOfType(typeid(CashTransaction))) // ADL kicks in because event_queue is in 'bank::' namespace
         {
             std::cout << "CASH TYPE: " << event_queue.size() << std::endl;
-            std::unique_ptr<Event> event = event_queue.dequeue(); // Should move object
-            auto cash_transaction = static_cast<CashTransaction *>(event.get());
+            std::unique_ptr<Event> event = event_queue.dequeue(); // get the event
+            auto cash_transaction = static_cast<CashTransaction *>(event.get()); // cast to Cashtransaction
 
             int amount = cash_transaction->getAmount();
             std::string to = cash_transaction->getToAccount();
@@ -29,6 +29,7 @@ void cashTransactionThreadFunction()
 
             std::cout << "Transfer " << amount << " to " << to << " from " << from << std::endl;
 
+            std::scoped_lock<std::mutex> lock(databaseSavingsAccountsMutex);
             SavingsAccount *to_account = database.getSavingsAccountByEmail(to);
             SavingsAccount *from_account = database.getSavingsAccountByEmail(from);
 

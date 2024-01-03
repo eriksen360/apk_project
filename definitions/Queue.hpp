@@ -1,13 +1,31 @@
+#pragma once
 #include <queue>
 #include <mutex>
 #include <condition_variable>
 #include <thread>
+#include "Event.hpp"
+#include <concepts>
+#include <type_traits>
+#include <memory>
 
 /*
 TODO: Add rule of 5
 */
+namespace bank{
 
 template <typename T>
+concept DerivedFromEvent = std::is_base_of<Event, T>::value;
+
+template <typename T>
+concept UniquePtrToDerivedFromEvent =
+    requires(T t) {
+        {
+            t.get()
+        } -> std::convertible_to<Event *>;
+    } && std::is_same_v<T, std::unique_ptr<typename T::element_type>> && DerivedFromEvent<typename T::element_type>;
+
+template <typename T>
+    requires UniquePtrToDerivedFromEvent<T>
 class EventMessageQueue
 {
 public:
@@ -52,7 +70,8 @@ public:
         return value;
     }
 
-    size_t size() {
+    size_t size()
+    {
         std::scoped_lock<std::mutex> lock(mtx);
         return queue.size();
     }
@@ -64,3 +83,4 @@ private:
     mutable std::mutex mtx; // mutable allows the mutex to be used in const functions
     std::condition_variable cond_var;
 };
+}
