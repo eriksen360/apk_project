@@ -12,8 +12,8 @@ enum TransactionType
 class Transaction : public Event
 {
 public:
-    Transaction(std::string to, std::string from) : Event(), toAccountEmail(to), fromAccountEmail(from){};
-    Transaction(std::string to) : Event(), toAccountEmail(to), fromAccountEmail(0){};
+    Transaction(std::string to, std::string from) : Event(), toAccountEmail(to), fromAccountEmail(from) {};
+    Transaction(std::string to) : Event(), toAccountEmail(to) {};
     virtual ~Transaction(){};
 
     std::string getToAccount()

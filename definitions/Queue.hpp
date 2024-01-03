@@ -11,7 +11,7 @@
 /*
 TODO: Add rule of 5
 */
-namespace bank{
+namespace bank {
 
 template <typename T>
 concept DerivedFromEvent = std::is_base_of<Event, T>::value;

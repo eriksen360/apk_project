@@ -123,12 +123,12 @@ public:
         return amount;
     }
 
-    void addAmount(int n)
+    void addAmount(int n) noexcept
     {
         amount += n;
     }
 
-    void removeAmount(int n)
+    void removeAmount(int n) noexcept
     {
         amount -= n;
     }

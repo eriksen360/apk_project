@@ -21,49 +21,55 @@ void cashTransactionThreadFunction()
         {
             std::cout << "CASH TYPE: " << event_queue.size() << std::endl;
             std::unique_ptr<Event> event = event_queue.dequeue(); // get the event
-            auto cash_transaction = static_cast<CashTransaction *>(event.get()); // cast to Cashtransaction
+            auto cashTransaction = static_cast<CashTransaction *>(event.get()); // cast to Cashtransaction
 
-            int amount = cash_transaction->getAmount();
-            std::string to = cash_transaction->getToAccount();
-            std::string from = cash_transaction->getFromAccount();
+            int amount = cashTransaction->getAmount();
+            std::string toEmail = cashTransaction->getToAccount();
+            std::string fromEmail = cashTransaction->getFromAccount();
 
-            std::cout << "Transfer " << amount << " to " << to << " from " << from << std::endl;
+            std::cout << "Transfer " << amount << " to " << toEmail << " from " << fromEmail << std::endl;
 
             std::scoped_lock<std::mutex> lock(databaseSavingsAccountsMutex);
-            SavingsAccount *to_account = database.getSavingsAccountByEmail(to);
-            SavingsAccount *from_account = database.getSavingsAccountByEmail(from);
-
-            if (to_account != nullptr)
+            bank::SavingsAccount* toAccount = database.getSavingsAccountsFor(toEmail);
+            bank::SavingsAccount* fromAccount = database.getSavingsAccountsFor(fromEmail);
+            if (toAccount != nullptr)
             {
-                if (from_account != nullptr)
+                if (fromAccount != nullptr)
                 {
-                    from_account->removeAmount(amount);
-                    to_account->addAmount(amount);
+                    // TODO: This is a nothrow guarantee?
+                    fromAccount->removeAmount(amount);
+                    toAccount->addAmount(amount);
+                    std::cout << amount << " transfered to account " << toAccount << " with success." << std::endl;
 
-                    std::cout << "Transfered" << std::endl;
+                    // TODO: Discard if transaction is not logged properly? Strong guarantee?
+                    // toAccount->addToTransactionLog(std::move(cashTransaction))
+                    toAccount->addToTransactionLog(*cashTransaction);
                 }
                 else
                 {
-                    std::cout << "Error: From account not found" << std::endl;
+                    toAccount->addAmount(amount);
+                    std::cout << amount << " transfered to account " << toAccount << " with success." << std::endl;
+                    // TODO: Discard if transaction is not logged properly? Strong guarantee?
+                    //toAccount->addToTransactionLog(std::move(cashTransaction))
+                    toAccount->addToTransactionLog(*cashTransaction);
+                    std::cout << "No from_account -> This is a deposit." << std::endl;
                 }
             }
             else
             {
-                std::cout << "Error: To account not found" << std::endl;
+                std::cout << "No to_account -> Transaction Error." << std::endl;
             }
+            // Scoped_lock releases mutex? How does mutex work in namespace compared to global?
 
+            // -----------------------------------
             // Handle Transaction depending on if deposit, withdrawel or transfer
-
             // if (Transaction.from) {
-            //     SavingsAccount fromSavingsAccount = database.getSavingsAccount(transaction->getFromAccountID());
+            //     bank::SavingsAccount fromSavingsAccount = database.getSavingsAccount(transaction->getFromAccountID());
             //     fromSavingsAccount.removeAmount(transaction->getAmount());
             // }
-
             // Strong guarantee that amount must be added only if removed
-
-            // SavingsAccount toSavingsAccount = database.getSavingsAccount(transaction->getFromAccountID());
+            // bank::SavingsAccount toSavingsAccount = database.getSavingsAccount(transaction->getFromAccountID());
             // toSavingsAccount.addAmount(transaction->getAmount());
-
             // Save transaction to appropiate account
         }
     }
@@ -98,15 +104,15 @@ void SecurityTransactionThreadFunction()
 
                                 {
                                     std::scoped_lock<std::mutex> lock(databaseSavingsAccountsMutex);
-                                    SecuritiesAccount<Stock> securitiesAccount = database.getStockAccount(transaction->getToAccountID());
-                                    SecuritiesAccount<Stock> securitiesAccountCopy = std::deep_copy(securitiesAccount);
+                                    bank::SecuritiesAccount<Stock> securitiesAccount = database.getStockAccount(transaction->getToAccountID());
+                                    bank::SecuritiesAccount<Stock> securitiesAccountCopy = std::deep_copy(securitiesAccount);
                                     securitiesAccount.addAsset(transaction->);
                                 }
                                 // Should withdraw amount from savingsAccount and buy stocks with it if enough funds.
                             }
                             else
                             {
-                                SecuritiesAccount<Bond> securitiesAccount = database.getBondAccount(transaction->getToAccountID());
+                                bank::SecuritiesAccount<Bond> securitiesAccount = database.getBondAccount(transaction->getToAccountID());
                             }
                         }
                         catch (std::exception &e)
@@ -117,7 +123,7 @@ void SecurityTransactionThreadFunction()
                         // Strong guarantee exception here if addAsset fails, we should not deduct amount but nothing should happen
 
                         savingsAccount.removeAmount(transaction->getAmount());
-                        SecuritiesAccount.addToTransactionLog(transaction);
+                        securitiesAccount.addToTransactionLog(transaction);
                         */
         }
     }
@@ -142,18 +148,18 @@ void ConversionTransactionThreadFunction()
 
 int main()
 {
-    SavingsAccount s1(1, "Opsparingskonto", "a.jensen@gmail.com", Cash(10000, DKK));
-    SavingsAccount s2(2, "Opsparingskonto", "b.hansen@gmail.com", Cash(5400, DKK));
-    database.savingAccounts.emplace(s1.getID(), std::move(s1));
-    database.savingAccounts.emplace(s2.getID(), std::move(s2));
+    bank::SavingsAccount s1(1, "Opsparingskonto", "a.jensen@gmail.com", Cash(10000, DKK));
+    bank::SavingsAccount s2(2, "Opsparingskonto", "b.hansen@gmail.com", Cash(5400, DKK));
+    database.savingsAccounts.emplace(s1.getUserEmail(), std::move(s1));
+    database.savingsAccounts.emplace(s2.getUserEmail(), std::move(s2));
 
     /* SecuritiesAccount<Stock> s3(1, "Aktiekonto", "a.jensen@gmail.com");
-     SecuritiesAccount<Stock> s4(2, "Aktiekonto", "b.hansen@gmail.com");
+     bank::SecuritiesAccount<Stock> s4(2, "Aktiekonto", "b.hansen@gmail.com");
      database.stockAccounts.emplace(s3.getID(), std::move(s3));
      database.stockAccounts.emplace(s4.getID(), std::move(s4));
 
-     SecuritiesAccount<Bond> s5(1, "Obligationskonto", "a.jensen@gmail.com");
-     SecuritiesAccount<Bond> s6(2, "Obligationskonto", "b.hansen@gmail.com");
+     bank::SecuritiesAccount<Bond> s5(1, "Obligationskonto", "a.jensen@gmail.com");
+     bank::SecuritiesAccount<Bond> s6(2, "Obligationskonto", "b.hansen@gmail.com");
      database.bondAccounts.emplace(s5.getID(), std::move(s5));
      database.bondAccounts.emplace(s6.getID(), std::move(s6));*/
 
@@ -169,27 +175,24 @@ int main()
     // s1.print();
     // s2.print();
 
-    for (auto x : database.savingAccounts)
+    for (auto x : database.savingsAccounts)
     {
         x.second.print();
     }
 
     std::unique_ptr<Event> eventRequest; // Send condition on eventRequest
     std::string userEmail;
-
     do
     {
         std::cout << "User logged in as: ";
         std::cin >> userEmail;
-        // if (!database.accountExistsFor(userEmail))
-        //{
-        //     std::cout << "User does not exist. Please try again." << std::endl;
-        // }
-        // else
-        //{
-        database.displayAccountsFor(userEmail);
-        break;
-        //}
+        if (!database.accountExistsFor(userEmail)) {
+            std::cout << "User does not exist. Please try again." << std::endl;
+        }
+        else {
+            database.displayAccountsFor(userEmail);
+            break;
+        }
     } while (1);
 
     char choice = 0;
@@ -199,8 +202,8 @@ int main()
         try
         {
             std::cin.ignore();
-            std::cin >> choice; // TODO: Exception to handle invalid arguments
-            if (choice < 0 || choice > 255)
+            std::cin >> choice;
+            if (choice < 48 || choice > 57)   // C = {0..9}  TODO: Should be on illegal type
             {
                 throw std::invalid_argument(&choice);
             }
@@ -209,7 +212,7 @@ int main()
         {
             std::cout << "Please enter a valid choice [Integer range 0-255]";
             std::cout << "#3: " << ex.what() << '\n';
-            choice = 0;
+            choice = '0';
         }
 
         int amount = 0;
@@ -322,7 +325,7 @@ int main()
     //     s2.addAmount(cashTransaction->getAmount());
     // }
 
-    for (auto x : database.savingAccounts)
+    for (auto x : database.savingsAccounts)
     {
         x.second.print();
     }
