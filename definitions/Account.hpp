@@ -5,6 +5,8 @@
 #include <concepts>
 #include <iostream>
 #include <unordered_map>
+#include <mutex>
+#include <memory>
 
 template <typename T>
 class Account
@@ -29,7 +31,7 @@ public:
         return name;
     }
 
-    std::string getUserEmail() const 
+    std::string getUserEmail() const
     {
         return userEmail;
     }
@@ -95,13 +97,18 @@ public:
                   << "Name: " << this->getName() << "\n\n";
     }
 
+    void addSecurity(std::unique_ptr<Security> security)
+    {
+        securities.push_back(std::move(security));
+    }
+
 private:
-    std::vector<Security> securities;
+    std::vector<std::unique_ptr<Security>> securities;
 };
 
-mutable std::mutex databaseSavingsAccountsMutex; // mutable allows the mutex to be used in const functions
-mutable std::mutex databaseStockAccountsMutex; // mutable allows the mutex to be used in const functions
-mutable std::mutex databaseBondAccountsMutex; // mutable allows the mutex to be used in const functions
+std::mutex databaseSavingsAccountsMutex;
+std::mutex databaseStockAccountsMutex;
+std::mutex databaseBondAccountsMutex;
 
 struct DatabaseMock
 { // TODO: Use UIID keys
@@ -109,17 +116,31 @@ struct DatabaseMock
     std::unordered_map<int, SecuritiesAccount<Stock>> stockAccounts;
     std::unordered_map<int, SecuritiesAccount<Bond>> bondAccounts;
 
-    bool accountExistsFor(std::string userEmail) {
+    SavingsAccount *getSavingsAccountByEmail(const std::string &email)
+    {
+        for (auto &pair : savingAccounts)
+        {
+            SavingsAccount &account = pair.second;
+            if (account.getUserEmail() == email)
+            {
+                return &account; // Return the address of the account
+            }
+        }
+        return nullptr; // Return nullptr if not found
+    }
+
+    bool accountExistsFor(std::string userEmail)
+    {
 
         // Use iterator + algorithm to find account in any of the maps
     }
 
-    void displayAccountsFor(std::string userEmail) {
+    void displayAccountsFor(std::string userEmail)
+    {
 
         // Use iterator + algorithm to find account in any of the maps
         // Call .print() on each account
     }
-
 };
 
 // // You should not be able to make a strockTransaction if you

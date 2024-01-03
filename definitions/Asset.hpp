@@ -1,5 +1,6 @@
 #include <string>
 #include <chrono>
+#include <unordered_map>
 
 enum Currency
 {
@@ -7,51 +8,86 @@ enum Currency
     USD = 1
 };
 
-class Asset {  //TODO: Asset should have a move constructor with noexcept since it should be moved between accounts
+class Asset
+{ // TODO: Asset should have a move constructor with noexcept since it should be moved between accounts
 private:
     int id;
+
 public:
-    Asset() {};
-    virtual ~Asset() {};
+    Asset(){};
+    Asset(const Asset &) = default;
+    Asset(Asset &&) noexcept = default;
+    Asset &operator=(const Asset &) = default;
+    Asset &operator=(Asset &&) noexcept = default;
+    virtual ~Asset() = default;
 };
 
-const class Security : public Asset {
+class Security : public Asset
+{
 private:
     int assetId;
     std::string name;
     double buyPrice;
     double currentPrice;
     double sellPrice;
-    const std::chrono::_V2::system_clock::time_point purchasedAt;
-    const std::chrono::_V2::system_clock::time_point soldAt; 
+    std::chrono::_V2::system_clock::time_point purchasedAt;
+    std::chrono::_V2::system_clock::time_point soldAt;
+
 public:
-    Security() {};
-    virtual ~Security() {};
+    Security(std::string name, double buyPrice, double currentPrice, double sellPrice)
+        : name(name), buyPrice(buyPrice), currentPrice(currentPrice), sellPrice(sellPrice){};
+    Security(const Security &) = default;
+    Security(Security &&) noexcept = default;
+    Security &operator=(const Security &) = default;
+    Security &operator=(Security &&) noexcept = default;
+    virtual ~Security() = default;
     virtual void print() const = 0;
-    void getBuyPrice() const {
+    double getBuyPrice() const
+    {
         return buyPrice;
     }
-    void getCurrentPrice() const {
+    double getCurrentPrice() const
+    {
         return currentPrice;
     }
-    void getSellPrice() const {
+    double getSellPrice() const
+    {
         return sellPrice;
     }
-    virtual void buySignal() const {
+    void buySignal()
+    {
         purchasedAt = std::chrono::system_clock::now();
     }
-    virtual void sellSignal() const {
+    void sellSignal()
+    {
         soldAt = std::chrono::system_clock::now();
     }
 };
 
-const class Bond : public Security {
+class Bond : public Security
+{
 public:
-    Bond(std::string name, double buyPrice, double currentPrice, double sellPrice) 
-     : Security(name, buyPrice, currentPrice, sellPrice) {};
-    ~Bond() {};
-    void print() const {
+    Bond(std::string name, double buyPrice, double currentPrice, double sellPrice)
+        : Security(name, buyPrice, currentPrice, sellPrice){};
+    ~Bond(){};
+    void print() const
+    {
         std::cout << "Bond" << std::endl;
+        std::cout << "Purchase price: " << this->getBuyPrice() << std::endl;
+        std::cout << "Current price: " << this->getCurrentPrice() << std::endl;
+        std::cout << "Selling price: " << this->getSellPrice() << std::endl;
+    }
+};
+
+class Stock : public Security
+{
+public:
+    Stock(std::string name, double buyPrice, double currentPrice, double sellPrice)
+        : Security(name, buyPrice, currentPrice, sellPrice){};
+    ~Stock(){};
+    void print() const
+    {
+        std::cout << "Stock" << std::endl;
         std::cout << "Purchase price: " << this->getBuyPrice() << std::endl;
         std::cout << "Current price: " << this->getCurrentPrice() << std::endl;
         std::cout << "Selling price: " << this->getSellPrice() << std::endl;
@@ -63,55 +99,45 @@ const static std::unordered_map<std::string, Stock> availableStocks = {
     {"AAPL", Stock("AAPL", 9.0, 9.0, 9.0)},
     {"TSLA", Stock("TSLA", 8.0, 8.0, 8.0)},
     {"GOOG", Stock("GOOG", 7.0, 7.0, 7.0)},
-    {"MSFT", Stock("MSFT", 6.0, 6.0, 6.0)}
-};
-
-const class Stock : public Security {
-public:
-    Stock(std::string name, double buyPrice, double currentPrice, double sellPrice) 
-     : Security(name, buyPrice, currentPrice, sellPrice) {};
-    ~Stock() {};
-    void print() const {
-        std::cout << "Stock" << std::endl;
-        std::cout << "Purchase price: " << this->getBuyPrice() << std::endl;
-        std::cout << "Current price: " << this->getCurrentPrice() << std::endl;
-        std::cout << "Selling price: " << this->getSellPrice() << std::endl;
-    }
-};
+    {"MSFT", Stock("MSFT", 6.0, 6.0, 6.0)}};
 
 const static std::unordered_map<std::string, Bond> availableBonds = {
-    {"10Y US Treasury", Bond()},
-    {"30Y US Treasury", Bond()},
-    {"10Y Danish Treasury", Bond()},
-    {"30Y Danish Treasury", Bond()}
-};
+    {"10Y US Treasury", Bond("10Y US Treasury", 100.0, 100.0, 100.0)},
+    {"30Y US Treasury", Bond("30Y US Treasury", 100.0, 100.0, 100.0)},
+    {"10Y Danish Treasury", Bond("10Y Danish Treasury", 100.0, 100.0, 100.0)},
+    {"30Y Danish Treasury", Bond("10Y Danish Treasury", 100.0, 100.0, 100.0)}};
 
-class Cash : public Asset {
+class Cash : public Asset
+{
 private:
     int foo() { return 0; };
     int amount = 0;
     const Currency currency = DKK;
-public:
-    Cash(int amount, Currency currency) : amount(amount), currency(currency) {};
 
-    int getAmount() const {
+public:
+    Cash(int amount, Currency currency) : amount(amount), currency(currency){};
+
+    int getAmount() const
+    {
         return amount;
     }
 
-    void addAmount(int n){
+    void addAmount(int n)
+    {
         amount += n;
     }
 
-    void removeAmount(int n){
+    void removeAmount(int n)
+    {
         amount -= n;
     }
 
-    Currency getCurrency() const {
+    Currency getCurrency() const
+    {
         return currency;
     }
 
     // Add move constructor?
-
 };
 
 /*

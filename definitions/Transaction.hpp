@@ -1,25 +1,33 @@
 #include "Event.hpp"
 #include "Asset.hpp"
 
-enum TransactionType {
+enum TransactionType
+{
     BUY = 0,
     SELL = 1,
     CONVERT = 2
-}
+};
 
 class Transaction : public Event
 {
 public:
-    Transaction(intstd::string to, istd::stringnt from) : Event(), toAccountId(to), fromAccountId(from) {};
-    Transaction(std::string to) : Event(), toAccountId(to), fromAccountId(0) {};
+    Transaction(std::string to, std::string from) : Event(), toAccountEmail(to), fromAccountEmail(from){};
+    Transaction(std::string to) : Event(), toAccountEmail(to), fromAccountEmail(0){};
     virtual ~Transaction(){};
-    virtual getToAccount() {
-        // Virtual, as the transaction type should be able to return the account it is to
+
+    std::string getToAccount()
+    {
+        return toAccountEmail;
+    }
+
+    std::string getFromAccount()
+    {
+        return fromAccountEmail;
     }
 
 private:
     std::string toAccountEmail;
-    std::string fromAccountEmal;
+    std::string fromAccountEmail;
 };
 
 class CashTransaction : public Transaction
@@ -48,7 +56,7 @@ private:
 class SecurityTransaction : public Transaction
 {
 public:
-    SecurityTransaction(int to, int from) : Transaction(to, from) {};
+    SecurityTransaction(std::string to, std::string from) : Transaction(to, from){};
 };
 
 class BondTransaction : public SecurityTransaction
@@ -56,9 +64,10 @@ class BondTransaction : public SecurityTransaction
 private:
     std::vector<Bond> bonds;
     TransactionType type;
+
 public:
-    BondTransaction(int to, int from, std::vector<Bond>& bonds, TransactionType type)
-    : SecurityTransaction(to, from), bonds(std::move(bonds)), type(type) {}
+    BondTransaction(std::string to, std::string from, std::vector<Bond> &bonds, TransactionType type)
+        : SecurityTransaction(to, from), bonds(std::move(bonds)), type(type) {}
 
     TransactionType getType() const
     {
@@ -78,9 +87,10 @@ class StockTransaction : public SecurityTransaction
 private:
     std::vector<Stock> stocks;
     TransactionType type;
+
 public:
-    StockTransaction(int to, int from, std::vector<Stock>& stocks, TransactionType type)
-    : SecurityTransaction(to, from), stocks(std::move(stocks)), type(type) {}
+    StockTransaction(std::string to, std::string from, std::vector<Stock> &stocks, TransactionType type)
+        : SecurityTransaction(to, from), stocks(std::move(stocks)), type(type) {}
 
     TransactionType getType() const
     {
@@ -96,7 +106,8 @@ public:
 };
 
 class ConversionTransaction : public Transaction
-{};
+{
+};
 
 /*
 template <typename T, typename U>
