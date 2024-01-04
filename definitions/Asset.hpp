@@ -6,6 +6,12 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
+/*
+All assets have move constructors and move assignment operator, 
+as they should be moveable, not copyable. 
+
+*/
+
 enum Currency
 {
     DKK = 0,
@@ -13,13 +19,11 @@ enum Currency
 };
 
 class Asset
-{ // TODO: Asset should have a move constructor with noexcept since it should be moved between accounts
+{ 
 public:
-    Asset() {};
-    Asset(const Asset &) = default;
-    Asset(Asset &&) noexcept = default;
-    Asset &operator=(const Asset &) = default;
-    Asset &operator=(Asset &&) noexcept = default;
+    Asset(){};                                     // default constructor
+    Asset(Asset &&) noexcept = default;            // move constructor
+    Asset &operator=(Asset &&) noexcept = default; // move assignemnt
     virtual ~Asset() = default;
 };
 
@@ -36,18 +40,20 @@ private:
 
 public:
     Security(std::string name, double buyPrice, double currentPrice, double sellPrice)
-        : name(name), buyPrice(buyPrice), currentPrice(currentPrice), sellPrice(sellPrice) {
-            boost::uuids::random_generator gen;
-            boost::uuids::uuid _id = gen();
-            id = _id;
-        };
-    Security(const Security &) = default;
+        : name(name), buyPrice(buyPrice), currentPrice(currentPrice), sellPrice(sellPrice)
+    {
+        boost::uuids::random_generator gen;
+        boost::uuids::uuid _id = gen();
+        id = _id;
+    };
+
     Security(Security &&) noexcept = default;
-    Security &operator=(const Security &) = default;
     Security &operator=(Security &&) noexcept = default;
     virtual ~Security() = default;
+
     virtual void print() const = 0;
-    std::string getName() const {
+    std::string getName() const
+    {
         return name;
     }
     double getBuyPrice() const
@@ -70,7 +76,8 @@ public:
     {
         soldAt = std::chrono::system_clock::now();
     }
-    boost::uuids::uuid getId() const {
+    boost::uuids::uuid getId() const
+    {
         return id;
     }
 };
@@ -80,7 +87,11 @@ class Bond : public Security
 public:
     Bond(std::string name, double buyPrice, double currentPrice, double sellPrice)
         : Security(name, buyPrice, currentPrice, sellPrice){};
-    ~Bond(){};
+
+    Bond(Bond &&) noexcept = default;
+    Bond &operator=(Bond &&) noexcept = default;
+
+    ~Bond() = default;
     void print() const
     {
         std::cout << "Bond" << std::endl;
@@ -96,7 +107,11 @@ class Stock : public Security
 public:
     Stock(std::string name, double buyPrice, double currentPrice, double sellPrice)
         : Security(name, buyPrice, currentPrice, sellPrice){};
-    ~Stock(){};
+
+    Stock(Stock &&) noexcept = default;
+    Stock &operator=(Stock &&) noexcept = default;
+
+    ~Stock() = default;
     void print() const
     {
         std::cout << "Stock" << std::endl;
@@ -123,12 +138,15 @@ const static std::unordered_map<std::string, Bond> availableBonds = {
 class Cash : public Asset
 {
 private:
-    int foo() { return 0; };
     int amount = 0;
     const Currency currency = DKK;
 
 public:
     Cash(int amount, Currency currency) : amount(amount), currency(currency){};
+    Cash(Cash &&) noexcept = default;
+    Cash &operator=(Cash &&) noexcept = default;
+
+    ~Cash() = default;
 
     int getAmount() const
     {
@@ -149,8 +167,6 @@ public:
     {
         return currency;
     }
-
-    // Add move constructor?
 };
 
 /*

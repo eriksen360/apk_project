@@ -49,8 +49,8 @@ namespace bank {
     class SavingsAccount : public Account<CashTransaction>
     {
     public:
-        SavingsAccount(int id, std::string name, std::string userEmail, Cash cash)
-            : Account<CashTransaction>(id, std::move(name), userEmail), cash(cash) {} // TODO: See exmaple in slides for std::moving own object
+        SavingsAccount(int id, std::string name, std::string userEmail, const Cash& cash)
+            : Account<CashTransaction>(id, std::move(name), userEmail), cash(std::move(cash)) {} // TODO: See exmaple in slides for std::moving own object
 
         int getAmount() const
         {

@@ -182,8 +182,8 @@ void ConversionTransactionThreadFunction()
 
 int main()
 {
-    bank::SavingsAccount s1(1, "Opsparingskonto", "a.jensen@gmail.com", Cash(10000, DKK));
-    bank::SavingsAccount s2(2, "Opsparingskonto", "b.hansen@gmail.com", Cash(5400, DKK));
+    bank::SavingsAccount s1(1, "Opsparingskonto", "a.jensen@gmail.com", std::move(Cash(10000, DKK)));
+    bank::SavingsAccount s2(2, "Opsparingskonto", "b.hansen@gmail.com", std::move(Cash(5400, DKK)));
     database.savingsAccounts.emplace(s1.getUserEmail(), std::move(s1));
     database.savingsAccounts.emplace(s2.getUserEmail(), std::move(s2));
 
