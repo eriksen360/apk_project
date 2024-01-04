@@ -11,7 +11,7 @@
 
 namespace bank {
 
-    template <typename T>
+    template<typename T>
     class Account
     {
     public:
@@ -19,7 +19,7 @@ namespace bank {
 
         virtual void print() = 0;
 
-        virtual void addToTransactionLog(T t)
+        virtual void addToTransactionLog(T& t)
         {
             transactions.push_back(std::move(t));
         }
@@ -62,9 +62,9 @@ namespace bank {
             cash.addAmount(n);
         }
 
-        void removeAmount(int n) // noexcept
+        void reduceAmount(int n) // noexcept
         {
-            cash.removeAmount(n);
+            cash.reduceAmount(n);
         }
 
         Currency getCurrency() const
@@ -85,7 +85,7 @@ namespace bank {
         Cash cash; // overload operation med concept til at specificere at currency matcher cash.currency
     };
 
-    template <typename T, typename A> // concept til at tjekke for stock eller bond, og concept til at tjekke for at T er en bestemt tranaktionstype
+    template <typename A, typename T> // concept til at tjekke for stock eller bond, og concept til at tjekke for at T er en bestemt tranaktionstype
     class SecuritiesAccount : public Account<T>
     {
     public:
@@ -119,8 +119,22 @@ namespace bank {
             return 0.0;
         }
 
+        void addSecurities(std::vector<A> _securities) {
+            // TODO: Implement move properly
+            securities.insert( securities.end(), _securities.begin(), _securities.end() );
+        }
+
+        std::vector<A> returnSecurities(T security, int amount) {
+            std::vector<A> tmp;
+            return tmp;
+            // Iterate over securities
+
+                // If we cannot find amount security -> Discard operaiton adn throw exception
+                // Else add to tmp vector and return
+        }
+
     private:
-        std::vector<A*> securities;
+        std::vector<A> securities;
         // std::vector<unique_ptr<A>> securities;  <--- Det her er den ikke glad for, fordi typen A ikke er deducable 
     };
 
@@ -195,8 +209,8 @@ struct DatabaseMock {
         are a significant amount of accounts.
     */
     std::unordered_map<std::string, bank::SavingsAccount> savingsAccounts;
-    std::unordered_map<std::string, bank::SecuritiesAccount<StockTransaction, Stock>> stockAccounts;
-    std::unordered_map<std::string, bank::SecuritiesAccount<BondTransaction, Bond>> bondAccounts;
+    std::unordered_map<std::string, bank::SecuritiesAccount<Stock, SecurityTransaction<Stock>>> stockAccounts;
+    std::unordered_map<std::string, bank::SecuritiesAccount<Bond, SecurityTransaction<Bond>>> bondAccounts;
 
     bool accountExistsFor(std::string userEmail)
     {
@@ -238,7 +252,7 @@ struct DatabaseMock {
         return nullptr;
     }
 
-    bank::SecuritiesAccount<StockTransaction, Stock>* getStockAccountFor(std::string userEmail) {
+    bank::SecuritiesAccount<Stock, SecurityTransaction<Stock>>* getStockAccountFor(std::string userEmail) {
         auto element = this->stockAccounts.find(userEmail);
         if (element != this->stockAccounts.end()) {
             return &(element->second);
@@ -246,7 +260,7 @@ struct DatabaseMock {
         return nullptr;
     }
 
-    bank::SecuritiesAccount<BondTransaction, Bond>* getBondAccountFor(std::string userEmail) {
+    bank::SecuritiesAccount<Bond, SecurityTransaction<Bond>>* getBondAccountFor(std::string userEmail) {
         auto element = this->bondAccounts.find(userEmail);
         if (element != this->bondAccounts.end()) {
             return &(element->second);

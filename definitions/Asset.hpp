@@ -158,7 +158,7 @@ public:
         amount += n;
     }
 
-    void removeAmount(int n) noexcept
+    void reduceAmount(int n) noexcept
     {
         amount -= n;
     }
