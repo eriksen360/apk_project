@@ -36,7 +36,7 @@ private:
 
 public:
     Security(std::string name, double buyPrice, double currentPrice, double sellPrice)
-        : name(name), buyPrice(buyPrice), currentPrice(currentPrice), sellPrice(sellPrice) {
+        : name(name), buyPrice(buyPrice), currentPrice(currentPrice), sellPrice(sellPrice) { 
             boost::uuids::random_generator gen;
             boost::uuids::uuid _id = gen();
             id = _id;
@@ -140,7 +140,7 @@ public:
         amount += n;
     }
 
-    void removeAmount(int n) noexcept
+    void reduceAmount(int n) noexcept
     {
         amount -= n;
     }

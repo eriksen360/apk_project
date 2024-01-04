@@ -38,7 +38,7 @@ void cashTransactionThreadFunction()
                 if (fromAccount != nullptr)
                 {
                     // TODO: This is a nothrow guarantee?
-                    fromAccount->removeAmount(amount);
+                    fromAccount->reduceAmount(amount);
                     toAccount->addAmount(amount);
                     std::cout << amount << " transfered to account " << toAccount << " with success." << std::endl;
 
@@ -66,7 +66,7 @@ void cashTransactionThreadFunction()
             // Handle Transaction depending on if deposit, withdrawel or transfer
             // if (Transaction.from) {
             //     bank::SavingsAccount fromSavingsAccount = database.getSavingsAccount(transaction->getFromAccountID());
-            //     fromSavingsAccount.removeAmount(transaction->getAmount());
+            //     fromSavingsAccount.reduceAmout(transaction->getAmount());
             // }
             // Strong guarantee that amount must be added only if removed
             // bank::SavingsAccount toSavingsAccount = database.getSavingsAccount(transaction->getFromAccountID());
@@ -78,23 +78,20 @@ void cashTransactionThreadFunction()
 
 void SecurityTransactionThreadFunction()
 {
-    std::string _type = "NONE";
-    SecurityTransaction* transaction;
     for (;;)
     {
-        if (!event_queue.frontIsOfType(typeid(StockTransaction)) && !event_queue.frontIsOfType(typeid(BondTransaction)))
+        if (event_queue.frontIsOfType(typeid(SecurityTransaction<Stock>)))
         {
-            continue;
-        }
-        else if (event_queue.frontIsOfType(typeid(StockTransaction)))
-        {
-            _type = "STOCK";
+
             std::cout << "Stock Type in Queue: " << event_queue.size() << std::endl;
             std::unique_ptr<Event> event = event_queue.dequeue(); // Should move object
-            StockTransaction *transaction = static_cast<StockTransaction *>(event.get());
-            std::scoped_lock<std::mutex> stockAccountLock(databaseStockAccountsMutex);
-            bank::SecuritiesAccount<StockTransaction, Stock>* securityAccount = database.getStockAccountFor(transaction->getToAccount());
-            
+            SecurityTransaction<Stock> *transaction = static_cast<SecurityTransaction<Stock> *>(event.get());
+
+            if (transaction->is_stock()) {
+                std::cout << "Transaction is not a stock transaction. Skipping." << std::endl;
+                continue;
+            }
+
             std::scoped_lock<std::mutex> savingsAccountLock(databaseSavingsAccountsMutex);
             bank::SavingsAccount* savingsAccount = database.getSavingsAccountFor(transaction->getToAccount());
             if (savingsAccount == nullptr) {
@@ -102,19 +99,42 @@ void SecurityTransactionThreadFunction()
                 continue; // lock released by exiting scope of loop.
             }
 
-            // Check if funds are available
-            // If available purchase stocks, deduct amount (with strong guarantee) and add them to securitiesAccount
-            // Add to transaction log
+            if (transaction->getTransactionCost() > savingsAccount->getAmount()) {
+                std::cout << "Not enough funds to buy stocks." << std::endl;
+                continue;
+            }
+
+            std::scoped_lock<std::mutex> stockAccountLock(databaseStockAccountsMutex);
+            bank::SecuritiesAccount<Stock, SecurityTransaction<Stock>>* securityAccount = database.getStockAccountFor(transaction->getToAccount());
+            if (securityAccount == nullptr) {
+                std::cout << "No bond account found for user. Cannot transfer bonds." << std::endl;
+                continue; // lock released by exiting scope of loop.
+            }
+
+            // This part should be strong guarantee
+            try {
+                // copy of each account
+            auto securities = transaction->getSecurities();
+            securityAccount->addSecurities(std::move(securities));
+
+            savingsAccount->reduceAmount(transaction->getTransactionCost());
+            securityAccount->addToTransactionLog(*transaction);  // std::move(transaction)
+            } catch (...) {
+                // revert accounts to previous state
+            }
         }
-        else if (event_queue.frontIsOfType(typeid(BondTransaction)))
+        if (event_queue.frontIsOfType(typeid(SecurityTransaction<Bond>)))
         {
-            _type = "BOND";
+
             std::cout << "Bond Type in Queue: " << event_queue.size() << std::endl;
             std::unique_ptr<Event> event = event_queue.dequeue(); // Should move object
-            BondTransaction *transaction = static_cast<BondTransaction *>(event.get());
-            std::scoped_lock<std::mutex> bondAccountLock(databaseBondAccountsMutex);
-            bank::SecuritiesAccount<BondTransaction, Bond>* securityAccount = database.getBondAccountFor(transaction->getToAccount());
-            
+            SecurityTransaction<Bond> *transaction = static_cast<SecurityTransaction<Bond> *>(event.get());
+
+            if (!transaction->is_bond()) {
+                std::cout << "Transaction is not a bond transaction. Skipping." << std::endl;
+                continue;
+            }
+           
             std::scoped_lock<std::mutex> savingsAccountLock(databaseSavingsAccountsMutex);
             bank::SavingsAccount* savingsAccount = database.getSavingsAccountFor(transaction->getToAccount());
             if (savingsAccount == nullptr) {
@@ -122,44 +142,30 @@ void SecurityTransactionThreadFunction()
                 continue; // lock released by exiting scope of loop.
             }
 
-            // Check if funds are available
-            // If available purchase stocks, deduct amount (with strong guarantee) and add them to securitiesAccount
-            // Add to transaction log
-        }
-        
-            // -----------------------------------------------------------------------------
-            //}
-            /*
-                        try
-                        {
-                            // Place locks around database access.
-                            if (typeid(transaction) == StockTransaction)
-                            {
+            if (transaction->getTransactionCost() > savingsAccount->getAmount()) {
+                std::cout << "Not enough funds to buy stocks." << std::endl;
+                continue;
+            }
 
-                                {
-                                    std::scoped_lock<std::mutex> lock(databaseSavingsAccountsMutex);
-                                    bank::SecuritiesAccount<Stock> securitiesAccount = database.getStockAccount(transaction->getToAccountID());
-                                    bank::SecuritiesAccount<Stock> securitiesAccountCopy = std::deep_copy(securitiesAccount);
-                                    securitiesAccount.addAsset(transaction->);
-                                }
-                                // Should withdraw amount from savingsAccount and buy stocks with it if enough funds.
-                            }
-                            else
-                            {
-                                bank::SecuritiesAccount<Bond> securitiesAccount = database.getBondAccount(transaction->getToAccountID());
-                            }
-                        }
-                        catch (std::exception &e)
-                        {
-                            securitiesAccount = securitiesAccountCopy
-                        }
+            std::scoped_lock<std::mutex> bondAccountLock(databaseBondAccountsMutex);
+            bank::SecuritiesAccount<Bond, SecurityTransaction<Bond>>* securityAccount = database.getBondAccountFor(transaction->getToAccount());
+            if (securityAccount == nullptr) {
+                std::cout << "No bond account found for user. Cannot transfer bonds." << std::endl;
+                continue; // lock released by exiting scope of loop.
+            }
 
-                        // Strong guarantee exception here if addAsset fails, we should not deduct amount but nothing should happen
-
-                        savingsAccount.removeAmount(transaction->getAmount());
-                        securitiesAccount.addToTransactionLog(transaction);
-                        */
-        
+            // This part should be strong guarantee
+            try {
+                // copy of each account
+            auto securities = transaction->getSecurities();
+            securityAccount->addSecurities(std::move(securities));
+            
+            savingsAccount->reduceAmount(transaction->getTransactionCost());
+            securityAccount->addToTransactionLog(*transaction);  // std::move(transaction)
+            } catch (...) {
+                // revert accounts to previous state
+            }
+        }    
     }
 }
 
@@ -187,7 +193,7 @@ int main()
     database.savingsAccounts.emplace(s1.getUserEmail(), std::move(s1));
     database.savingsAccounts.emplace(s2.getUserEmail(), std::move(s2));
 
-    bank::SecuritiesAccount<StockTransaction, Stock> s3(1, "Aktiekonto", "a.jensen@gmail.com");
+    bank::SecuritiesAccount<Stock, SecurityTransaction<Stock>> s3(1, "Aktiekonto", "a.jensen@gmail.com");
     // bank::SecuritiesAccount<Stock> s4(2, "Aktiekonto", "b.hansen@gmail.com");
     database.stockAccounts.emplace(s3.getUserEmail(), std::move(s3));
     /* database.stockAccounts.emplace(s4.getID(), std::move(s4));
@@ -315,7 +321,7 @@ int main()
             }
             Stock stock = stockElem->second;
             std::cout << "id: " << stock.getId() << std::endl;
-            eventRequest = std::make_unique<StockTransaction>(userEmail, stock, amount, transactionType); // wrap event object in unique_ptr
+            eventRequest = std::make_unique<SecurityTransaction<Stock>>(userEmail, stock, amount, transactionType); // wrap event object in unique_ptr
             event_queue.enqueue(std::move(eventRequest));                                      // move the unique_ptr of the event to the queue
             break;
         /*case 4: // Buy|Sell Bonds
@@ -376,7 +382,7 @@ int main()
     // Skal laves om til exception hvis den fejler
     // if (auto cashTransaction = static_cast<CashTransaction *>(eventHandler.get()))
     // {
-    //     s1.removeAmount(cashTransaction->getAmount());
+    //     s1.reduceAmount(cashTransaction->getAmount());
     //     s2.addAmount(cashTransaction->getAmount());
     // }
 

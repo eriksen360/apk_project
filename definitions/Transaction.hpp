@@ -54,53 +54,100 @@ private:
 
 // Transactions requires std::constness of type -> Queue should contain * to const Events
 
+template<typename T>
 class SecurityTransaction : public Transaction
 {
 private:
+
+    std::vector<T> securities;
     TransactionType type;
 public:
-    SecurityTransaction(std::string toEmail, TransactionType _type) : Transaction(toEmail), type(_type) {};
+    SecurityTransaction(std::string toEmail, T security, int amount, TransactionType _type) : Transaction(toEmail), type(_type) {
+        for (int i = 0; i < amount; i++) {
+            securities.push_back(security);
+        }
+    };
+    
+    double getTransactionCost() const {
+        if (securities.size() > 0) {
+            return securities[0].getBuyPrice() * securities.size();
+        }
+        return 0.0; 
+    }
+
     TransactionType getType() const
     {
         return type;
     }
-};
 
-class BondTransaction : public SecurityTransaction
-{
-private:
-    std::vector<Bond> bonds;
-public:
-    BondTransaction(std::string toEmail, Bond bond, int amount, TransactionType _type)
-        : SecurityTransaction(toEmail, _type) {
-            // Add amount of bonds to bonds;
-        }
-
-    size_t getSize() const
-    {
-        return bonds.size();
+    std::vector<T> getSecurities() {
+        return securities;
     }
 
-    ~BondTransaction() override {}
-};
-
-class StockTransaction : public SecurityTransaction
-{
-private:
-    std::vector<Stock> stocks;
-public:
-    StockTransaction(std::string toEmail, Stock stock, int amount, TransactionType _type)
-        : SecurityTransaction(toEmail, _type) {
-             // Add amount of stocks to stocks;
-        }
-
-    size_t getSize() const
-    {
-        return stocks.size();
+    constexpr bool is_stock() {
+        return std::is_same<T, Stock>::value;
     }
 
-    ~StockTransaction() override {}
+    constexpr bool is_bond() {
+        return std::is_same<T, Bond>::value;
+    }
+
+    ~SecurityTransaction() {}
 };
+
+// class BondTransaction : public SecurityTransaction
+// {
+// private:
+//     std::vector<Bond> bonds;
+// public:
+//     BondTransaction(std::string toEmail, Bond bond, int amount, TransactionType _type)
+//         : SecurityTransaction(toEmail, _type) {
+//             for (int i = 0; i < amount; i++) {
+//                 stocks.push_back(bond);
+//             }
+//         }
+
+//     size_t getSize() const
+//     {
+//         return bonds.size();
+//     }
+
+//     double getTransactionCost() const {
+//         if getSize() > 0 {
+//             return bonds[0].getBuyPrice() * getSize();
+//         }
+//         return 0.0; 
+//     }
+
+//     ~BondTransaction() override {}
+// };
+
+// class StockTransaction : public SecurityTransaction
+// {
+// private:
+//     std::vector<Stock> stocks;
+// public:
+//     StockTransaction(std::string toEmail, Stock stock, int amount, TransactionType _type)
+//         : SecurityTransaction(toEmail, _type) {
+//             for (int i = 0; i < amount; i++) {
+//                 stocks.push_back(stock);
+//             }
+//         }
+
+//     size_t getSize() const
+//     {
+//         return stocks.size();
+//     }
+
+//     double getTransactionCost() const {
+//         if getSize() > 0 {
+//             return stocks[0].getBuyPrice() * getSize();
+//         }
+//         return 0.0; 
+//     }
+
+//     ~StockTransaction() override {}
+// };
 
 class ConversionTransaction : public Transaction
 {
