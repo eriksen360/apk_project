@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <mutex>
 #include <memory>
+#include <algorithm>
 
 namespace bank {
 
@@ -15,7 +16,7 @@ namespace bank {
     class Account
     {
     public:
-        Account(std::string name, std::string userEmail) : id(id), name(std::move(name)), userEmail(userEmail) {
+        Account(std::string name, std::string userEmail) : name(std::move(name)), userEmail(userEmail) {
             boost::uuids::random_generator gen;
             boost::uuids::uuid _id = gen();
             id = _id;
@@ -23,7 +24,7 @@ namespace bank {
 
         virtual void print() = 0;
 
-        virtual void addToTransactionLog(T& t)
+        virtual void addToTransactionLog(T&& t)
         {
             transactions.push_back(std::move(t));
         }
@@ -44,7 +45,7 @@ namespace bank {
         }
 
     private:
-        const boost::uuids::uuid id;
+        boost::uuids::uuid id;
         const std::string name;
         const std::string userEmail;
         std::vector<T> transactions;
@@ -53,8 +54,8 @@ namespace bank {
     class SavingsAccount : public Account<CashTransaction>
     {
     public:
-        SavingsAccount(int id, std::string name, std::string userEmail, Cash&& cash)
-            : Account<CashTransaction>(id, std::move(name), userEmail), cash(std::move(cash)) {} // TODO: See exmaple in slides for std::moving own object
+        SavingsAccount(std::string name, std::string userEmail, Cash&& cash)
+            : Account<CashTransaction>(std::move(name), userEmail), cash(std::move(cash)) {} // TODO: See exmaple in slides for std::moving own object
 
         int getAmount() const
         {
@@ -93,8 +94,8 @@ namespace bank {
     class SecuritiesAccount : public Account<T>
     {
     public:
-        SecuritiesAccount(int id, std::string name, std::string userEmail)
-            : Account<T>(id, std::move(name), userEmail) {}
+        SecuritiesAccount(std::string name, std::string userEmail)
+            : Account<T>(std::move(name), userEmail) {}
 
         ~SecuritiesAccount(){};
 
@@ -102,10 +103,10 @@ namespace bank {
         {
             std::cout << "Type: Securities Account\n"
                     << "ID: " << this->getID() << '\n'
-                    << "Name: " << this->getName() << "\n\n"
+                    << "Name: " << this->getName() << "\n"
                     << "Email: " << this->getUserEmail() << '\n'
                     << "Total asset value: " << getTotalAssetValue() << '\n'
-                    << "Mean asset value: " << getMeanAssetValue() << '\n';
+                    << "Mean asset value: " << getMeanAssetValue() << '\n\n';
         }
 
         void addSecurity(A& security)
@@ -119,16 +120,15 @@ namespace bank {
             {
                 assetValueSum += securities[i].getCurrentPrice();
             }
-            return assetValueSum
+            return assetValueSum;
         }
 
-        double getMeanAssetValue() const {
-            return getTotalAssetValue() / securities.size();
+        double getMeanAssetValue() {
+            return (getTotalAssetValue() / securities.size());
         }
 
         void addSecurities(std::vector<A> _securities) {
-            // TODO: Implement move properly
-            securities.insert( securities.end(), _securities.begin(), _securities.end() );
+            std::move(_securities.begin(), _securities.end(), std::back_inserter(securities));
         }
 
         std::vector<A> returnSecurities(T security, int amount) {

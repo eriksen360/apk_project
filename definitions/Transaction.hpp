@@ -75,7 +75,7 @@ public:
         return type;
     }
 
-    std::vector<T> getSecurities() {
+    std::vector<T>& getSecurities() {
         return securities;
     }
 

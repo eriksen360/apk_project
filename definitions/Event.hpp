@@ -26,6 +26,6 @@ public:
     virtual ~Event() {}
 
 private:
-    const boost::uuids::uuid id;
+    boost::uuids::uuid id;
     const std::chrono::_V2::system_clock::time_point createdAt;
 };

@@ -7,9 +7,9 @@
 #include <boost/uuid/uuid_io.hpp>
 
 /*
-All assets have move constructors and move assignment operator, 
-as they should be moveable, not copyable. 
-
+All assets have move/copy constructors and move/copy assignment operator. 
+In reality it should only be moveable, to make sure assets are not copied. 
+But for simplicity of the program, it is copyable. 
 */
 
 enum Currency
@@ -21,9 +21,11 @@ enum Currency
 class Asset
 { // TODO: Asset should have a move constructor with noexcept since it should be moved between accounts
 private:
-    boost::uuids::uuid id;          
+    boost::uuids::uuid id;
+
 public:
-    Asset() {
+    Asset()
+    {
         boost::uuids::random_generator gen;
         boost::uuids::uuid _id = gen();
         id = _id;
@@ -32,9 +34,10 @@ public:
     {
         return id;
     }
+
     Asset(const Asset &) = default;
-    Asset(Asset &&) noexcept = default;
     Asset &operator=(const Asset &) = default;
+    Asset(Asset &&) noexcept = default;
     Asset &operator=(Asset &&) noexcept = default;
     virtual ~Asset() = default;
 };
@@ -51,8 +54,10 @@ private:
 
 public:
     Security(std::string name, double buyPrice, double currentPrice, double sellPrice)
-        : name(name), buyPrice(buyPrice), currentPrice(currentPrice), sellPrice(sellPrice) {};
+        : name(name), buyPrice(buyPrice), currentPrice(currentPrice), sellPrice(sellPrice){};
+
     Security(const Security &) = default;
+    Security &operator=(const Security &) = default;
     Security(Security &&) noexcept = default;
     Security &operator=(Security &&) noexcept = default;
     virtual ~Security() = default;
@@ -90,6 +95,8 @@ public:
     Bond(std::string name, double buyPrice, double currentPrice, double sellPrice)
         : Security(name, buyPrice, currentPrice, sellPrice){};
 
+    Bond(const Bond &) = default;
+    Bond &operator=(const Bond &) = default;
     Bond(Bond &&) noexcept = default;
     Bond &operator=(Bond &&) noexcept = default;
 
@@ -110,6 +117,8 @@ public:
     Stock(std::string name, double buyPrice, double currentPrice, double sellPrice)
         : Security(name, buyPrice, currentPrice, sellPrice){};
 
+    Stock(const Stock &) = default;
+    Stock &operator=(const Stock &) = default;
     Stock(Stock &&) noexcept = default;
     Stock &operator=(Stock &&) noexcept = default;
 
@@ -145,6 +154,9 @@ private:
 
 public:
     Cash(int amount, Currency currency) : amount(amount), currency(currency){};
+
+    Cash(const Cash &) = default;
+    Cash &operator=(const Cash &) = default;
     Cash(Cash &&) noexcept = default;
     Cash &operator=(Cash &&) noexcept = default;
 
