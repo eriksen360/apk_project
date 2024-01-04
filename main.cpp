@@ -215,12 +215,12 @@ int main()
     // s1.print();
     // s2.print();
 
-    for (auto x : database.savingsAccounts)
+    for (auto &x : database.savingsAccounts)
     {
         x.second.print();
     }
 
-    for (auto x : database.stockAccounts)
+    for (auto &x : database.stockAccounts)
     {
         x.second.print();
     }
@@ -319,9 +319,9 @@ int main()
                 std::cout << "Stock not found." << std::endl;
                 break;
             }
-            Stock stock = stockElem->second;
+            Stock& stock = const_cast<Stock&>(stockElem->second);
             std::cout << "id: " << stock.getId() << std::endl;
-            eventRequest = std::make_unique<SecurityTransaction<Stock>>(userEmail, stock, amount, transactionType); // wrap event object in unique_ptr
+            eventRequest = std::make_unique<SecurityTransaction<Stock>>(userEmail, std::move(stock), amount, transactionType); // wrap event object in unique_ptr
             event_queue.enqueue(std::move(eventRequest));                                      // move the unique_ptr of the event to the queue
             break;
         /*case 4: // Buy|Sell Bonds
@@ -386,7 +386,7 @@ int main()
     //     s2.addAmount(cashTransaction->getAmount());
     // }
 
-    for (auto x : database.savingsAccounts)
+    for (auto &x : database.savingsAccounts)
     {
         x.second.print();
     }
