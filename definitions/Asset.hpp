@@ -19,18 +19,29 @@ enum Currency
 };
 
 class Asset
-{ 
+{ // TODO: Asset should have a move constructor with noexcept since it should be moved between accounts
+private:
+    boost::uuids::uuid id;          
 public:
-    Asset(){};                                     // default constructor
-    Asset(Asset &&) noexcept = default;            // move constructor
-    Asset &operator=(Asset &&) noexcept = default; // move assignemnt
+    Asset() {
+        boost::uuids::random_generator gen;
+        boost::uuids::uuid _id = gen();
+        id = _id;
+    };
+    boost::uuids::uuid getID() const
+    {
+        return id;
+    }
+    Asset(const Asset &) = default;
+    Asset(Asset &&) noexcept = default;
+    Asset &operator=(const Asset &) = default;
+    Asset &operator=(Asset &&) noexcept = default;
     virtual ~Asset() = default;
 };
 
 class Security : public Asset
 {
 private:
-    boost::uuids::uuid id;
     std::string name;
     double buyPrice;
     double currentPrice;
@@ -40,13 +51,8 @@ private:
 
 public:
     Security(std::string name, double buyPrice, double currentPrice, double sellPrice)
-        : name(name), buyPrice(buyPrice), currentPrice(currentPrice), sellPrice(sellPrice)
-    {
-        boost::uuids::random_generator gen;
-        boost::uuids::uuid _id = gen();
-        id = _id;
-    };
-
+        : name(name), buyPrice(buyPrice), currentPrice(currentPrice), sellPrice(sellPrice) {};
+    Security(const Security &) = default;
     Security(Security &&) noexcept = default;
     Security &operator=(Security &&) noexcept = default;
     virtual ~Security() = default;
@@ -75,10 +81,6 @@ public:
     void sellSignal()
     {
         soldAt = std::chrono::system_clock::now();
-    }
-    boost::uuids::uuid getId() const
-    {
-        return id;
     }
 };
 

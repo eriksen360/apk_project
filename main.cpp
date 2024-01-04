@@ -87,7 +87,7 @@ void SecurityTransactionThreadFunction()
             std::unique_ptr<Event> event = event_queue.dequeue(); // Should move object
             SecurityTransaction<Stock> *transaction = static_cast<SecurityTransaction<Stock> *>(event.get());
 
-            if (transaction->is_stock()) {
+            if (!transaction->is_stock()) {
                 std::cout << "Transaction is not a stock transaction. Skipping." << std::endl;
                 continue;
             }

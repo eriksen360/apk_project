@@ -15,7 +15,11 @@ namespace bank {
     class Account
     {
     public:
-        Account(int id, std::string name, std::string userEmail) : id(id), name(std::move(name)), userEmail(userEmail) {}
+        Account(std::string name, std::string userEmail) : id(id), name(std::move(name)), userEmail(userEmail) {
+            boost::uuids::random_generator gen;
+            boost::uuids::uuid _id = gen();
+            id = _id;
+        }
 
         virtual void print() = 0;
 
@@ -24,7 +28,7 @@ namespace bank {
             transactions.push_back(std::move(t));
         }
 
-        virtual int getID() const
+        boost::uuids::uuid getID() const
         {
             return id;
         }
@@ -40,7 +44,7 @@ namespace bank {
         }
 
     private:
-        const int id;
+        const boost::uuids::uuid id;
         const std::string name;
         const std::string userEmail;
         std::vector<T> transactions;
@@ -110,13 +114,16 @@ namespace bank {
         }
 
         double getTotalAssetValue() {
-            // Implement iterator for summation
-            return 0.0;
+            double assetValueSum;
+            for(unsigned int i = 0; i < securities.size(); i++)
+            {
+                assetValueSum += securities[i].getCurrentPrice();
+            }
+            return assetValueSum
         }
 
         double getMeanAssetValue() const {
-            // Implement algorithm for calculating
-            return 0.0;
+            return getTotalAssetValue() / securities.size();
         }
 
         void addSecurities(std::vector<A> _securities) {
@@ -128,9 +135,8 @@ namespace bank {
             std::vector<A> tmp;
             return tmp;
             // Iterate over securities
-
-                // If we cannot find amount security -> Discard operaiton adn throw exception
-                // Else add to tmp vector and return
+            // If we cannot find amount security -> Discard operaiton adn throw exception
+            // Else add to tmp vector and return
         }
 
     private:

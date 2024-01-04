@@ -26,11 +26,6 @@ public:
         return fromAccountEmail;
     }
 
-    void createID() override
-    {
-        setID(123); // TODO: make correct implementation
-    }
-
 private:
     std::string toAccountEmail;
     std::string fromAccountEmail;
@@ -85,6 +80,7 @@ public:
     }
 
     constexpr bool is_stock() {
+        std::cout << "IS_STOCK=" << std::is_same<T, Stock>::value << std::endl;
         return std::is_same<T, Stock>::value;
     }
 
