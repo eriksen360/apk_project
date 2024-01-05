@@ -1,6 +1,8 @@
 #pragma once
 #include "Event.hpp"
 #include "Asset.hpp"
+#include <concepts>
+#include <type_traits>
 
 enum TransactionType
 {
@@ -12,8 +14,8 @@ enum TransactionType
 class Transaction : public Event
 {
 public:
-    Transaction(std::string to, std::string from) : Event(), toAccountEmail(to), fromAccountEmail(from) {};
-    Transaction(std::string to) : Event(), toAccountEmail(to) {};
+    Transaction(std::string to, std::string from) : Event(), toAccountEmail(to), fromAccountEmail(from){};
+    Transaction(std::string to) : Event(), toAccountEmail(to){};
     virtual ~Transaction(){};
 
     std::string getToAccount()
@@ -47,27 +49,33 @@ private:
     int amount;
 };
 
-// Transactions requires std::constness of type -> Queue should contain * to const Events
+template <typename T>
+concept DerivedFromSecurity = std::is_base_of<Security, T>::value;
 
-template<typename T>
+template <typename T>
+    requires DerivedFromSecurity<T>
 class SecurityTransaction : public Transaction
 {
 private:
-
     std::vector<T> securities;
     TransactionType type;
+
 public:
-    SecurityTransaction(std::string toEmail, T security, int amount, TransactionType _type) : Transaction(toEmail), type(_type) {
-        for (int i = 0; i < amount; i++) {
+    SecurityTransaction(std::string toEmail, T security, int amount, TransactionType _type) : Transaction(toEmail), type(_type)
+    {
+        for (int i = 0; i < amount; i++)
+        {
             securities.push_back(security);
         }
     };
-    
-    double getTransactionCost() const {
-        if (securities.size() > 0) {
+
+    double getTransactionCost() const
+    {
+        if (securities.size() > 0)
+        {
             return securities[0].getBuyPrice() * securities.size();
         }
-        return 0.0; 
+        return 0.0;
     }
 
     TransactionType getType() const
@@ -75,16 +83,19 @@ public:
         return type;
     }
 
-    std::vector<T>& getSecurities() {
+    std::vector<T> &getSecurities()
+    {
         return securities;
     }
 
-    constexpr bool is_stock() {
+    constexpr bool is_stock()
+    {
         std::cout << "IS_STOCK=" << std::is_same<T, Stock>::value << std::endl;
         return std::is_same<T, Stock>::value;
     }
 
-    constexpr bool is_bond() {
+    constexpr bool is_bond()
+    {
         return std::is_same<T, Bond>::value;
     }
 
@@ -112,7 +123,7 @@ public:
 //         if getSize() > 0 {
 //             return bonds[0].getBuyPrice() * getSize();
 //         }
-//         return 0.0; 
+//         return 0.0;
 //     }
 
 //     ~BondTransaction() override {}
@@ -139,7 +150,7 @@ public:
 //         if getSize() > 0 {
 //             return stocks[0].getBuyPrice() * getSize();
 //         }
-//         return 0.0; 
+//         return 0.0;
 //     }
 
 //     ~StockTransaction() override {}

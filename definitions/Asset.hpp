@@ -10,6 +10,8 @@
 All assets have move/copy constructors and move/copy assignment operator. 
 In reality it should only be moveable, to make sure assets are not copied. 
 But for simplicity of the program, it is copyable. 
+
+All rule of 5 uses 
 */
 
 enum Currency

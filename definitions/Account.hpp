@@ -10,13 +10,15 @@
 #include <memory>
 #include <algorithm>
 
-namespace bank {
+namespace bank
+{
 
-    template<typename T>
+    template <typename T>
     class Account
     {
     public:
-        Account(std::string name, std::string userEmail) : name(std::move(name)), userEmail(userEmail) {
+        Account(std::string name, std::string userEmail) : name(std::move(name)), userEmail(userEmail)
+        {
             boost::uuids::random_generator gen;
             boost::uuids::uuid _id = gen();
             id = _id;
@@ -24,7 +26,7 @@ namespace bank {
 
         virtual void print() = 0;
 
-        virtual void addToTransactionLog(T&& t)
+        virtual void addToTransactionLog(T &&t)
         {
             transactions.push_back(std::move(t));
         }
@@ -54,7 +56,7 @@ namespace bank {
     class SavingsAccount : public Account<CashTransaction>
     {
     public:
-        SavingsAccount(std::string name, std::string userEmail, Cash&& cash)
+        SavingsAccount(std::string name, std::string userEmail, Cash &&cash)
             : Account<CashTransaction>(std::move(name), userEmail), cash(std::move(cash)) {} // TODO: See exmaple in slides for std::moving own object
 
         int getAmount() const
@@ -80,17 +82,21 @@ namespace bank {
         void print() override
         {
             std::cout << "Type: Savings Account\n"
-                    << "ID: " << this->getID() << '\n'
-                    << "Email: " << this->getUserEmail() << '\n'
-                    << "Name: " << this->getName() << '\n'
-                    << "Amount: " << getAmount() << "\n\n";
+                      << "ID: " << this->getID() << '\n'
+                      << "Email: " << this->getUserEmail() << '\n'
+                      << "Name: " << this->getName() << '\n'
+                      << "Amount: " << getAmount() << "\n\n";
         }
 
     private:
         Cash cash; // overload operation med concept til at specificere at currency matcher cash.currency
     };
 
-    template <typename A, typename T> // concept til at tjekke for stock eller bond, og concept til at tjekke for at T er en bestemt tranaktionstype
+    template <typename T>
+    concept DerivedFromSecurity = std::is_base_of<Security, T>::value;
+
+    template <typename A, typename T> 
+        requires DerivedFromSecurity<A>
     class SecuritiesAccount : public Account<T>
     {
     public:
@@ -102,36 +108,40 @@ namespace bank {
         void print() override
         {
             std::cout << "Type: Securities Account\n"
-                    << "ID: " << this->getID() << '\n'
-                    << "Name: " << this->getName() << "\n"
-                    << "Email: " << this->getUserEmail() << '\n'
-                    << "Total asset value: " << getTotalAssetValue() << '\n'
-                    << "Mean asset value: " << getMeanAssetValue() << '\n\n';
+                      << "ID: " << this->getID() << '\n'
+                      << "Name: " << this->getName() << "\n"
+                      << "Email: " << this->getUserEmail() << '\n'
+                      << "Total asset value: " << getTotalAssetValue() << '\n'
+                      << "Mean asset value: " << getMeanAssetValue() << '\n\n';
         }
 
-        void addSecurity(A& security)
+        void addSecurity(A &security)
         {
             securities.push_back(std::move(security));
         }
 
-        double getTotalAssetValue() {
+        double getTotalAssetValue()
+        {
             double assetValueSum;
-            for(unsigned int i = 0; i < securities.size(); i++)
+            for (unsigned int i = 0; i < securities.size(); i++)
             {
                 assetValueSum += securities[i].getCurrentPrice();
             }
             return assetValueSum;
         }
 
-        double getMeanAssetValue() {
+        double getMeanAssetValue()
+        {
             return (getTotalAssetValue() / securities.size());
         }
 
-        void addSecurities(std::vector<A> _securities) {
+        void addSecurities(std::vector<A> _securities)
+        {
             std::move(_securities.begin(), _securities.end(), std::back_inserter(securities));
         }
 
-        std::vector<A> returnSecurities(T security, int amount) {
+        std::vector<A> returnSecurities(T security, int amount)
+        {
             std::vector<A> tmp;
             return tmp;
             // Iterate over securities
@@ -141,7 +151,6 @@ namespace bank {
 
     private:
         std::vector<A> securities;
-        // std::vector<unique_ptr<A>> securities;  <--- Det her er den ikke glad for, fordi typen A ikke er deducable 
     };
 
     // // You should not be able to make a strockTransaction if you
@@ -208,7 +217,8 @@ std::mutex databaseSavingsAccountsMutex;
 std::mutex databaseStockAccountsMutex;
 std::mutex databaseBondAccountsMutex;
 
-struct DatabaseMock { 
+struct DatabaseMock
+{
     /*
         We have chosen to allow only one account type per user. This makes the use of
         an unordered_map ideal as we can index the account in O(1), even when there
@@ -220,13 +230,16 @@ struct DatabaseMock {
 
     bool accountExistsFor(std::string userEmail)
     {
-        if (this->savingsAccounts.find(userEmail) != this->savingsAccounts.end()) {
+        if (this->savingsAccounts.find(userEmail) != this->savingsAccounts.end())
+        {
             return true;
         }
-        if (this->stockAccounts.find(userEmail) != this->stockAccounts.end()) {
+        if (this->stockAccounts.find(userEmail) != this->stockAccounts.end())
+        {
             return true;
         }
-        if (this->bondAccounts.find(userEmail) != this->bondAccounts.end()) {
+        if (this->bondAccounts.find(userEmail) != this->bondAccounts.end())
+        {
             return true;
         }
         return false;
@@ -235,40 +248,49 @@ struct DatabaseMock {
     void displayAccountsFor(std::string userEmail)
     {
         auto savingsElement = this->savingsAccounts.find(userEmail);
-        if (savingsElement != this->savingsAccounts.end()) {
+        if (savingsElement != this->savingsAccounts.end())
+        {
             savingsElement->second.print();
         }
 
         auto stockElement = this->stockAccounts.find(userEmail);
-        if (stockElement != this->stockAccounts.end()) {
+        if (stockElement != this->stockAccounts.end())
+        {
             stockElement->second.print();
         }
 
         auto bondElement = this->bondAccounts.find(userEmail);
-        if (bondElement != this->bondAccounts.end()) {
+        if (bondElement != this->bondAccounts.end())
+        {
             bondElement->second.print();
         }
     }
 
-    bank::SavingsAccount* getSavingsAccountFor(std::string userEmail) {
+    bank::SavingsAccount *getSavingsAccountFor(std::string userEmail)
+    {
         auto element = this->savingsAccounts.find(userEmail);
-        if (element != this->savingsAccounts.end()) {
+        if (element != this->savingsAccounts.end())
+        {
             return &(element->second);
         }
         return nullptr;
     }
 
-    bank::SecuritiesAccount<Stock, SecurityTransaction<Stock>>* getStockAccountFor(std::string userEmail) {
+    bank::SecuritiesAccount<Stock, SecurityTransaction<Stock>> *getStockAccountFor(std::string userEmail)
+    {
         auto element = this->stockAccounts.find(userEmail);
-        if (element != this->stockAccounts.end()) {
+        if (element != this->stockAccounts.end())
+        {
             return &(element->second);
         }
         return nullptr;
     }
 
-    bank::SecuritiesAccount<Bond, SecurityTransaction<Bond>>* getBondAccountFor(std::string userEmail) {
+    bank::SecuritiesAccount<Bond, SecurityTransaction<Bond>> *getBondAccountFor(std::string userEmail)
+    {
         auto element = this->bondAccounts.find(userEmail);
-        if (element != this->bondAccounts.end()) {
+        if (element != this->bondAccounts.end())
+        {
             return &(element->second);
         }
         return nullptr;
