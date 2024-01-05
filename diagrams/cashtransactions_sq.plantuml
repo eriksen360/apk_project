@@ -1,0 +1,24 @@
+@startuml
+actor User as User
+
+User -> Client: Requests Cash Transaction
+Client -> EventMessageQueue: enqueue(CashTransaction(amount, toEmail, userEmail))
+
+cashTransactionThread -// EventMessageQueue: frontIsOfType(typeid(CashTransaction))
+EventMessageQueue --> cashTransactionThread: true
+cashTransactionThread -> EventMessageQueue: dequeue()
+EventMessageQueue --> cashTransactionThread: CashTransaction
+
+cashTransactionThread -> Database: getSavingsAccountFor(userEmail)
+Database --> cashTransactionThread: user_account
+cashTransactionThread -> cashTransactionThread: assert(user_acount)
+cashTransactionThread -> Database: getSavingsAccountFor(toEmail)
+Database --> cashTransactionThread: to_account
+cashTransactionThread -> cashTransactionThread: assert(to_acount)
+
+cashTransactionThread -> cashTransactionThread: user_account.reduceAmount(amount)
+cashTransactionThread -> cashTransactionThread: to_account.addAmount(amount)
+
+cashTransactionThread -> User: Cash Transaction succeded
+
+@enduml
