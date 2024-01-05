@@ -1,0 +1,166 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+class Asset {
+    -id: boost::uuids::uuid
+    +Asset()
+    +getID(): boost::uuids::uuid
+    +{abstract} ~Asset()
+}
+
+class Security {
+    -name: string
+    -buyPrice: double
+    -currentPrice: double
+    -sellPrice: double
+    -purchasedAt: chrono::_V2::system_clock::time_point
+    -soldAt: chrono::_V2::system_clock::time_point
+    +Security(string, double, double, double)
+    +{abstract} print(): void
+    +getName(): string
+    +getBuyPrice(): double
+    +getCurrentPrice(): double
+    +getSellPrice(): double
+    +buySignal(): void
+    +sellSignal(): void
+}
+
+class Bond {
+    +Bond(string, double, double, double)
+    +print(): void
+}
+
+class Stock {
+    +Stock(string, double, double, double)
+    +print(): void
+}
+
+class Cash {
+    -amount: int
+    -currency: Currency
+    +Cash(int, Currency)
+    +getAmount(): int
+    +addAmount(int): void
+    +reduceAmount(int): void
+    +getCurrency(): Currency
+}
+
+enum Currency {
+    DKK
+    USD
+}
+
+class Event {
+    -id: boost::uuids::uuid
+    -createdAt: chrono::_V2::system_clock::time_point
+    +Event()
+    +getCreatedAt(): chrono::_V2::system_clock::time_point
+    +getId(): boost::uuids::uuid
+    +{abstract} ~Event()
+}
+
+class Transaction {
+    -toAccountEmail: string
+    -fromAccountEmail: string
+    +Transaction(string, string)
+    +getToAccount(): string
+    +getFromAccount(): string
+    +{abstract} ~Transaction()
+}
+
+class CashTransaction {
+    -amount: int
+    +CashTransaction(int, string, string)
+    +getAmount(): int
+}
+
+class SecurityTransaction << template<T> >> {
+    -securities: vector<T>
+    -type: TransactionType
+    +SecurityTransaction(string, T, int, TransactionType)
+    +getTransactionCost(): double
+    +getType(): TransactionType
+    +getSecurities(): vector<T>
+    +is_stock(): bool
+    +is_bond(): bool
+}
+
+class ConversionTransaction {
+}
+
+class Account << template<T> >> {
+    -id: boost::uuids::uuid
+    -name: string
+    -userEmail: string
+    -transactions: vector<T>
+    +Account(string, string)
+    +{abstract} print(): void
+    +addToTransactionLog(T): void
+    +getID(): boost::uuids::uuid
+    +getName(): string
+    +getUserEmail(): string
+}
+
+class SavingsAccount {
+    -cash: Cash
+    +SavingsAccount(string, string, Cash)
+    +getAmount(): int
+    +addAmount(int): void
+    +reduceAmount(int): void
+    +getCurrency(): Currency
+    +print(): void
+}
+
+class SecuritiesAccount << template<A, T>>> {
+    -securities: vector<A>
+    +SecuritiesAccount(string, string)
+    +addSecurity(A&): void
+    +getTotalAssetValue(): double
+    +getMeanAssetValue(): double
+    +addSecurities(vector<A>): void
+    +returnSecurities(T, int): vector<A>
+}
+
+class EventMessageQueue << template<T> >> {
+    -queue: queue<T>
+    -mtx: mutable mutex
+    -cond_var: condition_variable
+    +EventMessageQueue()
+    +enqueue(const T&): void
+    +enqueue(T&&): void
+    +frontIsOfType(const type_info&): bool
+    +dequeue(): T
+    +size(): size_t
+}
+
+class DatabaseMock {
+    -savingsAccounts: unordered_map<string, SavingsAccount>
+    -stockAccounts: unordered_map<string, SecuritiesAccount<Stock, SecurityTransaction<Stock>>>
+    -bondAccounts: unordered_map<string, SecuritiesAccount<Bond, SecurityTransaction<Bond>>>
+    +accountExistsFor(string): bool
+    +displayAccountsFor(string): void
+    +getSavingsAccountFor(string): SavingsAccount*
+    +getStockAccountFor(string): SecuritiesAccount<Stock, SecurityTransaction<Stock>>*
+    +getBondAccountFor(string): SecuritiesAccount<Bond, SecurityTransaction<Bond>>*
+}
+
+Asset <|-- Cash
+Asset <|-- Security
+Security <|-- Bond
+Security <|-- Stock
+
+
+Account <|-- SavingsAccount
+Account <|-- SecuritiesAccount
+Cash ..> Currency
+SavingsAccount *-left- Cash
+
+Event <|-- Transaction
+Transaction <|-- CashTransaction
+Transaction <|-- SecurityTransaction
+Transaction <|-- ConversionTransaction
+
+DatabaseMock --> SavingsAccount
+DatabaseMock --> SecuritiesAccount
+
+@enduml
