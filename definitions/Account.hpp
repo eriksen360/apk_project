@@ -44,11 +44,14 @@ namespace bank {
             return userEmail;
         }
 
+        virtual void printTransactions() const = 0;
+
+        std::vector<T> transactions;  // Fix to avoid ADL and template deduction problems with inherited methods accessing this
+
     private:
         boost::uuids::uuid id;
         const std::string name;
         const std::string userEmail;
-        std::vector<T> transactions;
     };
 
     class SavingsAccount : public Account<CashTransaction>
@@ -62,12 +65,24 @@ namespace bank {
             return cash.getAmount();
         }
 
-        void addAmount(int n) // noexcept
+        void addAmount(int n) noexcept
         {
             cash.addAmount(n);
         }
 
-        void reduceAmount(int n) // noexcept
+        /*
+            Kan man sætte noexcept på at retunere en reference til en variabel?
+        */
+
+        /*
+            Noexcept er en erklæring til compileren om at fordi vi som bruger ikke mener denne
+            funktion kan smide en exception, så skal den ikke generere ekstra kode til at håndtere
+            exceptions. 
+
+            Compileren garanterer at hvis en exception bliver kaldt alligevel igennem et kald til en 
+            potentially-throwing guarantee eller et raise bliver programmet termineret.
+        */
+        void reduceAmount(int n) noexcept
         {
             cash.reduceAmount(n);
         }
@@ -77,13 +92,21 @@ namespace bank {
             return cash.getCurrency();
         }
 
+        void printTransactions() const override {
+            for (auto& transaction : transactions) {
+                transaction.print();
+            }
+        }
+
         void print() override
         {
             std::cout << "Type: Savings Account\n"
                     << "ID: " << this->getID() << '\n'
                     << "Email: " << this->getUserEmail() << '\n'
                     << "Name: " << this->getName() << '\n'
-                    << "Amount: " << getAmount() << "\n\n";
+                    << "Amount: " << getAmount() << "\n"
+                    << "-- TRANSACTIONS -- \n";
+            printTransactions();
         }
 
     private:
@@ -106,7 +129,11 @@ namespace bank {
                     << "Name: " << this->getName() << "\n"
                     << "Email: " << this->getUserEmail() << '\n'
                     << "Total asset value: " << getTotalAssetValue() << '\n'
-                    << "Mean asset value: " << getMeanAssetValue() << '\n\n';
+                    << "Mean asset value: " << getMeanAssetValue() << '\n';
+                    // TODO: Cannot print something that depends on a template parameter?
+        }
+
+        void printTransactions() const override {
         }
 
         void addSecurity(A& security)
@@ -124,6 +151,9 @@ namespace bank {
         }
 
         double getMeanAssetValue() {
+            if (securities.empty()) {
+                return 0;
+            }
             return (getTotalAssetValue() / securities.size());
         }
 
@@ -131,12 +161,33 @@ namespace bank {
             std::move(_securities.begin(), _securities.end(), std::back_inserter(securities));
         }
 
-        std::vector<A> returnSecurities(T security, int amount) {
-            std::vector<A> tmp;
-            return tmp;
-            // Iterate over securities
-            // If we cannot find amount security -> Discard operaiton adn throw exception
-            // Else add to tmp vector and return
+        bool hasSpecificSecurities(std::string securityName, int amount) {
+            std::vector<A> securitiesToReturn;
+            for (auto& accountSecurity : securities) {
+                if (accountSecurity.getName() == securityName) {
+                    securitiesToReturn.push_back(accountSecurity);
+                }
+            }
+            if (securitiesToReturn.size() != amount) {
+                return false;
+            }
+            return true;
+        }
+
+        void removeSecurities(std::string securityName, int amount) {
+            std::vector<int> indiciesToRemove;
+            for (int i = 0; i < securities.size(); i++) {
+                if (securities[i].getName() == securityName) {
+                    indiciesToRemove.push_back(i);
+                }
+            }
+            if (indiciesToRemove.size() != amount) {
+                throw std::logic_error("Cannot remove from account as not enough stocks.");
+            }
+            for (int i = 0; i < indiciesToRemove.size(); i++) {
+                // account for that removal of the i'th element shifts indicies of vector by i
+                securities.erase(securities.begin() + indiciesToRemove[i] - i);
+            }
         }
 
     private:
@@ -204,6 +255,7 @@ namespace bank {
 }
 
 // namespace database {
+
 std::mutex databaseSavingsAccountsMutex;
 std::mutex databaseStockAccountsMutex;
 std::mutex databaseBondAccountsMutex;

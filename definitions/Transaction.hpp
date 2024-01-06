@@ -1,6 +1,8 @@
 #pragma once
 #include "Event.hpp"
 #include "Asset.hpp"
+#include <tuple>
+#include <set>
 
 enum TransactionType
 {
@@ -25,6 +27,7 @@ public:
     {
         return fromAccountEmail;
     }
+    virtual void print() const = 0; 
 
 private:
     std::string toAccountEmail;
@@ -41,6 +44,10 @@ public:
     int getAmount() const
     {
         return amount;
+    }
+    void print() const override
+    {
+        std::cout << "Transaction amount: " << amount << std::endl;
     }
 
 private:
@@ -63,9 +70,23 @@ public:
         }
     };
     
-    double getTransactionCost() const {
+    double getTransactionBuyAmount() const {
         if (securities.size() > 0) {
             return securities[0].getBuyPrice() * securities.size();
+        }
+        return 0.0; 
+    }
+
+    double getTransactionCurrentAmount() const {
+        if (securities.size() > 0) {
+            return securities[0].getCurrentPrice() * securities.size();
+        }
+        return 0.0; 
+    }
+
+    double getTransactionSellAmount() const {
+        if (securities.size() > 0) {
+            return securities[0].getSellPrice() * securities.size();
         }
         return 0.0; 
     }
@@ -75,7 +96,20 @@ public:
         return type;
     }
 
-    std::vector<T>& getSecurities() {
+    std::tuple<std::string, int> getSecuritiesOverview() {
+        std::set <std::string> stockTypes;
+        for (auto& security : securities) {
+            stockTypes.insert(security.getName());
+        }
+        if (stockTypes.size() > 1) {
+                throw std::logic_error("Stocks in transaction of different types.");
+        }
+
+        return std::tuple<std::string, int>(*stockTypes.begin(), securities.size());
+    }
+
+    // These methdos for adding and removing should happen for the account!!
+    std::vector<T> getSecurities() const {
         return securities;
     }
 
@@ -86,6 +120,14 @@ public:
 
     constexpr bool is_bond() {
         return std::is_same<T, Bond>::value;
+    }
+
+    void print() const override
+    {
+        std::cout << "Id: " << getId() << std::endl;
+        std::cout << "Type: " << type << std::endl;
+        std::cout << "Number: " << securities.size() << std::endl;
+        std::cout << "Type: " << getType() << std::endl;
     }
 
     ~SecurityTransaction() {}
