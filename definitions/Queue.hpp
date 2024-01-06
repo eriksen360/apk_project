@@ -63,7 +63,7 @@ public:
     {
         std::unique_lock<std::mutex> lock(mtx);
         cond_var.wait(lock, [this]
-                      { return !queue.empty(); });
+                      { return !queue.empty(); }); // Simple Lambda expression
         T value = std::move(queue.front()); // Use std::move for movable types
         queue.pop();
 
