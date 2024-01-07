@@ -60,7 +60,7 @@ namespace bank
     {
     public:
         SavingsAccount(std::string name, std::string userEmail, Cash &&cash)
-            : Account<CashTransaction>(std::move(name), userEmail), cash(std::move(cash)) {} // TODO: See exmaple in slides for std::moving own object
+            : Account<CashTransaction>(std::move(name), std::move(userEmail)), cash(std::move(cash)) {} // TODO: See exmaple in slides for std::moving own object
 
         int getAmount() const
         {
@@ -115,16 +115,13 @@ namespace bank
         Cash cash; // overload operation med concept til at specificere at currency matcher cash.currency
     };
 
-    template <typename T>
-    concept DerivedFromSecurity = std::is_base_of<Security, T>::value;
-
     template <typename A, typename T> 
         requires DerivedFromSecurity<A>
     class SecuritiesAccount : public Account<T>
     {
     public:
         SecuritiesAccount(std::string name, std::string userEmail)
-            : Account<T>(std::move(name), userEmail) {}
+            : Account<T>(std::move(name), std::move(userEmail)) {}
 
         ~SecuritiesAccount(){};
 
@@ -142,7 +139,7 @@ namespace bank
         void printTransactions() const override {
         }
 
-        void addSecurity(A &security)
+        void addSecurity(A&& security)
         {
             securities.push_back(std::move(security));
         }
@@ -164,7 +161,7 @@ namespace bank
             return (getTotalAssetValue() / securities.size());
         }
 
-        void addSecurities(std::vector<A> _securities)
+        void addSecurities(std::vector<A>&& _securities)
         {
             std::move(_securities.begin(), _securities.end(), std::back_inserter(securities));
         }

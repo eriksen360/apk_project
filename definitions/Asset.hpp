@@ -6,19 +6,13 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-/*
-All assets have move/copy constructors and move/copy assignment operator. 
-In reality it should only be moveable, to make sure assets are not copied. 
-But for simplicity of the program, it is copyable. 
-
-All rule of 5 uses 
-*/
 
 enum Currency
 {
     DKK = 0,
     USD = 1
 };
+
 
 class Asset
 { // TODO: Asset should have a move constructor with noexcept since it should be moved between accounts
@@ -185,23 +179,36 @@ public:
     }
 };
 
-/*
+template <typename T>
+concept DerivedFromSecurity = std::is_base_of<Security, T>::value;
+
+template <typename T>
+concept DerivedFromAsset = std::is_base_of<Asset, T>::value;
+
 template<typename T, typename U>
-struct is_convertible<>  {
+struct is_convertible_from {
+    static const bool value = false;
+};
 
-    //T og U er ikke hvis T er Stock, Bond og skal til Bond, Stock
-}
+template<DerivedFromSecurity T, DerivedFromSecurity U>
+struct is_convertible_from<T, U> {
+    static const bool value = false;
+};
 
-template<typename T, typename U>
-struct is_convertible<Cash, Stock>  {
-    return true;
-}
+template<DerivedFromAsset T>
+struct is_convertible_from<T, T> {
+    static const bool value = false;
+};
 
-template<typename T>
-struct is_convertible<Cash, Cash>  {
+template<DerivedFromSecurity T>
+struct is_convertible_from<Cash, T> {
+    static const bool value = true;
+};
 
+template<DerivedFromSecurity T>
+struct is_convertible_from<T, Cash> {
+    static const bool value = true;
+};
 
-    // bestemte valutaer kan ikke konverteres fra og til hinanden
-}
-
-*/
+template <typename T, typename U>
+concept Convertible = is_convertible_from<T, U>::value;

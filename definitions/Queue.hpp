@@ -13,6 +13,7 @@ TODO: Add rule of 5
 */
 namespace bank {
 
+/* MessageQueue */
 template <typename T>
 concept DerivedFromEvent = std::is_base_of<Event, T>::value;
 
@@ -23,6 +24,7 @@ concept UniquePtrToDerivedFromEvent =
             t.get()
         } -> std::convertible_to<Event *>;
     } && std::is_same_v<T, std::unique_ptr<typename T::element_type>> && DerivedFromEvent<typename T::element_type>;
+
 
 template <typename T>
     requires UniquePtrToDerivedFromEvent<T>

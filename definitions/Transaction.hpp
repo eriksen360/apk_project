@@ -57,9 +57,6 @@ private:
 };
 
 template <typename T>
-concept DerivedFromSecurity = std::is_base_of<Security, T>::value;
-
-template <typename T>
     requires DerivedFromSecurity<T>
 class SecurityTransaction : public Transaction
 {
@@ -141,6 +138,9 @@ public:
     ~SecurityTransaction() {}
 };
 
+
+
+
 // class BondTransaction : public SecurityTransaction
 // {
 // private:
@@ -195,27 +195,16 @@ public:
 //     ~StockTransaction() override {}
 // };
 
-class ConversionTransaction : public Transaction
-{
-};
-
-/*
-template <typename T, typename U>
-requires asset_is_convertible<T, U>
-class ConversionTransaction : Transaction
-{
+template<typename T, typename U>
+    requires Convertible<T, U>
+class ConversionTransaction : public Transaction {
 private:
-    T from;
-    U to;
+    std::string toEmail;
+    int amount;
 public:
-    U convert(T from, U to);
+    ConversionTransaction(std::string toEmail, int amount) : Transaction(toEmail), toEmail(toEmail), amount(amount) {};
+    void print() const override
+    {
+        std::cout << "Conversion amount: " << amount << std::endl;
+    }
 };
-
-*/
-
-/*
-    Concept til at gøre is_convertible_from_and_to et trait på alle transaktiontyper
-
-    Stock og Bond er ikke konverterbare intern, men begge konverterbare til Cash
-    Cash er konverterbar til begge typer.
-*/
