@@ -1,13 +1,26 @@
+/**
+ * @file Event.hpp
+ *
+ * @author Filip Møgelvang Hansen & Mathias Fenger-Eriksen
+ *
+ * @brief File containing the base class Event.
+ *
+ */
 #pragma once
 #include <chrono>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-class Event  // Event should also have a move constructor since data is moved from a client to the queue
+/**
+ * @brief Base class for all events to me queued
+ *
+ */
+class Event
 {
 public:
-    Event() : createdAt(std::chrono::system_clock::now()) {
+    Event() : createdAt(std::chrono::system_clock::now())
+    {
         boost::uuids::random_generator gen;
         boost::uuids::uuid _id = gen();
         id = _id;

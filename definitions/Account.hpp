@@ -1,3 +1,12 @@
+/**
+ * @file Account.hpp
+ *
+ * @author Filip Møgelvang Hansen & Mathias Fenger-Eriksen
+ *
+ * @brief Account classes, wrapped in a bank namespace.
+ *
+ */
+
 #pragma once
 #include <string>
 #include <vector>
@@ -12,7 +21,11 @@
 
 namespace bank
 {
-
+    /**
+     * @brief Base account class.
+     *
+     * @tparam T Type of transactions
+     */
     template <typename T>
     class Account
     {
@@ -23,8 +36,6 @@ namespace bank
             boost::uuids::uuid _id = gen();
             id = _id;
         }
-
-        //Account& operator=(const Account&) = default;
 
         virtual void print() = 0;
 
@@ -53,8 +64,10 @@ namespace bank
             return transactions;
         }
 
-        void printTransactions() const {
-            for (auto& transaction : this->getTransactions()) {
+        void printTransactions() const
+        {
+            for (auto &transaction : this->getTransactions())
+            {
                 transaction.print();
             }
         }
@@ -66,13 +79,15 @@ namespace bank
         std::string userEmail;
     };
 
+    /**
+     * @brief Savings account used for Cash.
+     *
+     */
     class SavingsAccount : public Account<CashTransaction>
     {
     public:
         SavingsAccount(std::string name, std::string userEmail, Cash &&cash)
-            : Account<CashTransaction>(std::move(name), std::move(userEmail)), cash(std::move(cash)) {} // TODO: See exmaple in slides for std::moving own object
-
-        //SavingsAccount& operator=(const SavingsAccount&) = default;
+            : Account<CashTransaction>(std::move(name), std::move(userEmail)), cash(std::move(cash)) {}
 
         int getAmount() const
         {
@@ -84,14 +99,6 @@ namespace bank
             cash.addAmount(n);
         }
 
-        /*
-            Noexcept er en erklæring til compileren om at fordi vi som bruger ikke mener denne
-            funktion kan smide en exception, så skal den ikke generere ekstra kode til at håndtere
-            exceptions. 
-
-            Compileren garanterer at hvis en exception bliver kaldt alligevel igennem et kald til en 
-            potentially-throwing guarantee eller et raise bliver programmet termineret.
-        */
         void reduceAmount(int n) noexcept
         {
             cash.reduceAmount(n);
@@ -105,19 +112,25 @@ namespace bank
         void print() override
         {
             std::cout << "Type: Savings Account\n"
-                    << "ID: " << this->getID() << '\n'
-                    << "Email: " << this->getUserEmail() << '\n'
-                    << "Name: " << this->getName() << '\n'
-                    << "Amount: " << getAmount() << "\n"
-                    << "-- TRANSACTIONS -- \n";
+                      << "ID: " << this->getID() << '\n'
+                      << "Email: " << this->getUserEmail() << '\n'
+                      << "Name: " << this->getName() << '\n'
+                      << "Amount: " << getAmount() << "\n"
+                      << "-- TRANSACTIONS -- \n";
             this->printTransactions();
         }
 
     private:
-        Cash cash; // overload operation med concept til at specificere at currency matcher cash.currency
+        Cash cash;
     };
 
-    template <typename A, typename T> 
+    /**
+     * @brief Security account used for either Stock or Bond
+     *
+     * @tparam A Type derived from Security (Stock or Bond)
+     * @tparam T Type of transaction
+     */
+    template <typename A, typename T>
         requires DerivedFromSecurity<A>
     class SecuritiesAccount : public Account<T>
     {
@@ -130,23 +143,24 @@ namespace bank
         void print() override
         {
             std::cout << "Type: Securities Account\n"
-                    << "ID: " << this->getID() << '\n'
-                    << "Name: " << this->getName() << "\n"
-                    << "Email: " << this->getUserEmail() << '\n'
-                    << "Total asset value: " << getTotalAssetValue() << '\n'
-                    << "Mean asset value: " << getMeanAssetValue() << '\n'
-                    << "-- TRANSACTIONS -- \n";
+                      << "ID: " << this->getID() << '\n'
+                      << "Name: " << this->getName() << "\n"
+                      << "Email: " << this->getUserEmail() << '\n'
+                      << "Total asset value: " << getTotalAssetValue() << '\n'
+                      << "Mean asset value: " << getMeanAssetValue() << '\n'
+                      << "-- TRANSACTIONS -- \n";
             this->printTransactions();
         }
 
-        void addSecurity(A&& security)
+        void addSecurity(A &&security)
         {
             securities.push_back(std::move(security));
         }
 
         double getTotalAssetValue()
         {
-            if (securities.empty()) {
+            if (securities.empty())
+            {
                 return 0;
             }
             double assetValueSum;
@@ -157,43 +171,54 @@ namespace bank
             return assetValueSum;
         }
 
-        double getMeanAssetValue() {
-            if (securities.empty()) {
+        double getMeanAssetValue()
+        {
+            if (securities.empty())
+            {
                 return 0;
             }
             return (getTotalAssetValue() / securities.size());
         }
 
-        void addSecurities(std::vector<A>&& _securities)
+        void addSecurities(std::vector<A> &&_securities)
         {
             std::move(_securities.begin(), _securities.end(), std::back_inserter(securities));
         }
 
-        bool hasSpecificSecurities(std::string securityName, int amount) {
+        bool hasSpecificSecurities(std::string securityName, int amount)
+        {
             size_t n_securities = 0;
-            for (auto& accountSecurity : securities) {
-                if (accountSecurity.getName() == securityName) {
+            for (auto &accountSecurity : securities)
+            {
+                if (accountSecurity.getName() == securityName)
+                {
                     n_securities++;
                 }
             }
-            if (n_securities < amount) {
+
+            if (n_securities < amount)
+            {
                 return false;
             }
             return true;
         }
 
-        void removeSecurities(std::string securityName, int amount) {
+        void removeSecurities(std::string securityName, int amount)
+        {
             std::vector<int> indiciesToRemove;
-            for (int i = 0; i < securities.size(); i++) {
-                if (securities[i].getName() == securityName) {
+            for (int i = 0; i < securities.size(); i++)
+            {
+                if (securities[i].getName() == securityName)
+                {
                     indiciesToRemove.push_back(i);
                 }
             }
-            if (indiciesToRemove.size() < amount) {
+            if (indiciesToRemove.size() < amount)
+            {
                 throw std::logic_error("Cannot remove from account as not enough stocks.");
             }
-            for (int i = 0; i < amount; i++) {
-                // account for that removal of the i'th element shifts indicies of vector by i
+            for (int i = 0; i < amount; i++)
+            {
                 securities.erase(securities.begin() + indiciesToRemove[i] - i);
             }
         }
@@ -202,71 +227,16 @@ namespace bank
         std::vector<A> securities;
     };
 
-    // // You should not be able to make a strockTransaction if you
-    // // have no stockAccount
-
-    // // Concept to specify that only stocktransactions and
-    // // stockassets are allowed
-
-    // template <typename X>
-    // concept SecurityTransaction = std::is_same<X, StockTransaction> || std::is_same<X, BondTransaction> || std::is_same<X, ConversionTransaction>;
-
-    // template <typename X>
-    // concept SecurityAsset = std::is_same<X, Stock> || std::is_same<X, Bond>;
-
-    // template <typename X>
-    // concept _CashTransaction = std::same_as<X, CashTransaction>;
-
-    // // trait til cash
-
-    // // Concept til at definere U som Stock eller Bondtransaction
-    // template<typename M, typename U>
-    // requires SecurityTransaction<U>
-    // requires SecurityAsset<M>
-    // class SecuritiesAccount : Account<U> {
-    // private:
-    //     std::vector<M> securities;
-    // public:
-    //     virtual void addToTransactionLog(T transaction);
-    // };
-
-    // // TODO: Rule of 5!!! Do it everywhere. Move constructors only make sense
-    // // if the resource is not unique. You cannot move a
-
-    // class A {
-
-    // };
-
-    // enum Currency {
-    //     DKK = 0,
-    //     USD = 1
-    // };
-
-    // // Concept til at definere trait for T std::is_of_type_int<T>
-    // template<typename T>
-    // requires std::is_integral<T>
-    // class SavingsAccount : Account<CashTransaction, ConversionTransaction> { // <CashTransaction> her?
-
-    // // Type kan kun være cash
-    // private:
-    //     int amount;
-    //     Currency currency;  // get only property
-    //     SavingsAccount(Currency currency, T amount = 0);
-
-    //     // Must be cash and come from sale of stock or bond
-    //     // or regular deposit or withdrawel
-    //     type_of(transactions[0]::fromTransactionType)
-
-    // };
-
 }
-
-// namespace database {
 
 std::mutex databaseSavingsAccountsMutex;
 std::mutex databaseStockAccountsMutex;
 std::mutex databaseBondAccountsMutex;
 
+/**
+ * @brief Database for storing accounts.
+ *
+ */
 struct DatabaseMock
 {
     /*
@@ -300,25 +270,6 @@ struct DatabaseMock
         getSavingsAccountFor(userEmail)->print();
         getStockAccountFor(userEmail)->print();
         getBondAccountFor(userEmail)->print();
-        /*
-        auto savingsElement = this->savingsAccounts.find(userEmail);
-        if (savingsElement != this->savingsAccounts.end())
-        {
-            savingsElement->second.print();
-        }
-
-        auto stockElement = this->stockAccounts.find(userEmail);
-        if (stockElement != this->stockAccounts.end())
-        {
-            stockElement->second.print();
-        }
-
-        auto bondElement = this->bondAccounts.find(userEmail);
-        if (bondElement != this->bondAccounts.end())
-        {
-            bondElement->second.print();
-        }
-        */
     }
 
     bank::SavingsAccount *getSavingsAccountFor(std::string userEmail)
@@ -351,4 +302,3 @@ struct DatabaseMock
         return nullptr;
     }
 };
-//}

@@ -1,3 +1,12 @@
+/**
+ * @file Transaction.hpp
+ *
+ * @author Filip Møgelvang Hansen & Mathias Fenger-Eriksen
+ *
+ * @brief Transaction classes describing information about a transaction request.
+ *
+ */
+
 #pragma once
 #include "Event.hpp"
 #include "Asset.hpp"
@@ -6,6 +15,10 @@
 #include <concepts>
 #include <type_traits>
 
+/**
+ * @brief Specifies which type of transaction is requested.
+ *
+ */
 enum TransactionType
 {
     BUY = 0,
@@ -13,6 +26,10 @@ enum TransactionType
     CONVERT = 2
 };
 
+/**
+ * @brief Base Transaction class.
+ *
+ */
 class Transaction : public Event
 {
 public:
@@ -29,13 +46,17 @@ public:
     {
         return fromAccountEmail;
     }
-    virtual void print() const = 0; 
+    virtual void print() const = 0;
 
 private:
     std::string toAccountEmail;
     std::string fromAccountEmail;
 };
 
+/**
+ * @brief Cash Transaction class used for cash transaction (Transfer, deposit, withdraw)
+ *
+ */
 class CashTransaction : public Transaction
 {
 public:
@@ -56,6 +77,11 @@ private:
     int amount;
 };
 
+/**
+ * @brief Security Transaction class used for security transactions (Stock, Bond)
+ *
+ * @tparam T Must be derived from Security. @see Asset.hpp.
+ */
 template <typename T>
     requires DerivedFromSecurity<T>
 class SecurityTransaction : public Transaction
@@ -72,26 +98,32 @@ public:
             securities.push_back(security);
         }
     };
-    
-    double getTransactionBuyAmount() const {
-        if (securities.size() > 0) {
+
+    double getTransactionBuyAmount() const
+    {
+        if (securities.size() > 0)
+        {
             return securities[0].getBuyPrice() * securities.size();
         }
         return 0.0;
     }
 
-    double getTransactionCurrentAmount() const {
-        if (securities.size() > 0) {
+    double getTransactionCurrentAmount() const
+    {
+        if (securities.size() > 0)
+        {
             return securities[0].getCurrentPrice() * securities.size();
         }
-        return 0.0; 
+        return 0.0;
     }
 
-    double getTransactionSellAmount() const {
-        if (securities.size() > 0) {
+    double getTransactionSellAmount() const
+    {
+        if (securities.size() > 0)
+        {
             return securities[0].getSellPrice() * securities.size();
         }
-        return 0.0; 
+        return 0.0;
     }
 
     TransactionType getType() const
@@ -99,20 +131,23 @@ public:
         return type;
     }
 
-    std::tuple<std::string, int> getSecuritiesOverview() {
-        std::set <std::string> stockTypes;
-        for (auto& security : securities) {
+    std::tuple<std::string, int> getSecuritiesOverview()
+    {
+        std::set<std::string> stockTypes;
+        for (auto &security : securities)
+        {
             stockTypes.insert(security.getName());
         }
-        if (stockTypes.size() > 1) {
-                throw std::logic_error("Stocks in transaction of different types.");
+        if (stockTypes.size() > 1)
+        {
+            throw std::logic_error("Stocks in transaction of different types.");
         }
 
         return std::tuple<std::string, int>(*stockTypes.begin(), securities.size());
     }
 
-    // These methdos for adding and removing should happen for the account!!
-    std::vector<T> getSecurities() const {
+    std::vector<T> getSecurities() const
+    {
         return securities;
     }
 
@@ -138,71 +173,22 @@ public:
     ~SecurityTransaction() {}
 };
 
-
-
-
-// class BondTransaction : public SecurityTransaction
-// {
-// private:
-//     std::vector<Bond> bonds;
-// public:
-//     BondTransaction(std::string toEmail, Bond bond, int amount, TransactionType _type)
-//         : SecurityTransaction(toEmail, _type) {
-//             for (int i = 0; i < amount; i++) {
-//                 stocks.push_back(bond);
-//             }
-//         }
-
-//     size_t getSize() const
-//     {
-//         return bonds.size();
-//     }
-
-//     double getTransactionCost() const {
-//         if getSize() > 0 {
-//             return bonds[0].getBuyPrice() * getSize();
-//         }
-//         return 0.0;
-//     }
-
-//     ~BondTransaction() override {}
-// };
-
-// class StockTransaction : public SecurityTransaction
-// {
-// private:
-//     std::vector<Stock> stocks;
-// public:
-//     StockTransaction(std::string toEmail, Stock stock, int amount, TransactionType _type)
-//         : SecurityTransaction(toEmail, _type) {
-//             for (int i = 0; i < amount; i++) {
-//                 stocks.push_back(stock);
-//             }
-//         }
-
-//     size_t getSize() const
-//     {
-//         return stocks.size();
-//     }
-
-//     double getTransactionCost() const {
-//         if getSize() > 0 {
-//             return stocks[0].getBuyPrice() * getSize();
-//         }
-//         return 0.0;
-//     }
-
-//     ~StockTransaction() override {}
-// };
-
-template<typename T, typename U>
+/**
+ * @brief Conversion Transaction class using for converting assets. @see Asset.hpp for details on valid conversions.
+ *
+ * @tparam T Asset to convert from
+ * @tparam U Asset to convert to
+ */
+template <typename T, typename U>
     requires Convertible<T, U>
-class ConversionTransaction : public Transaction {
+class ConversionTransaction : public Transaction
+{
 private:
     std::string toEmail;
     int amount;
+
 public:
-    ConversionTransaction(std::string toEmail, int amount) : Transaction(toEmail), toEmail(toEmail), amount(amount) {};
+    ConversionTransaction(std::string toEmail, int amount) : Transaction(toEmail), toEmail(toEmail), amount(amount){};
     void print() const override
     {
         std::cout << "Conversion amount: " << amount << std::endl;

@@ -1,3 +1,11 @@
+/**
+ * @file Asset.hpp
+ *
+ * @author Filip Møgelvang Hansen & Mathias Fenger-Eriksen
+ *
+ * @brief
+ *
+ */
 #pragma once
 #include <string>
 #include <chrono>
@@ -6,16 +14,22 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-
+/**
+ * @brief Currency types.
+ *
+ */
 enum Currency
 {
     DKK = 0,
     USD = 1
 };
 
-
+/**
+ * @brief Base class for assets.
+ *
+ */
 class Asset
-{ // TODO: Asset should have a move constructor with noexcept since it should be moved between accounts
+{
 private:
     boost::uuids::uuid id;
 
@@ -38,6 +52,10 @@ public:
     virtual ~Asset() = default;
 };
 
+/**
+ * @brief Base class for securities.
+ *
+ */
 class Security : public Asset
 {
 private:
@@ -85,6 +103,10 @@ public:
     }
 };
 
+/**
+ * @brief Bond asset
+ *
+ */
 class Bond : public Security
 {
 public:
@@ -107,6 +129,10 @@ public:
     }
 };
 
+/**
+ * @brief Stock asset
+ *
+ */
 class Stock : public Security
 {
 public:
@@ -129,6 +155,10 @@ public:
     }
 };
 
+/**
+ * @brief Stocks available on the market.
+ *
+ */
 const static std::unordered_map<std::string, Stock> availableStocks = {
     {"AMD", Stock("AMD", 10.0, 10.0, 10.0)},
     {"AAPL", Stock("AAPL", 9.0, 9.0, 9.0)},
@@ -136,12 +166,20 @@ const static std::unordered_map<std::string, Stock> availableStocks = {
     {"GOOG", Stock("GOOG", 7.0, 7.0, 7.0)},
     {"MSFT", Stock("MSFT", 6.0, 6.0, 6.0)}};
 
+/**
+ * @brief Bonds available on the market.
+ *
+ */
 const static std::unordered_map<std::string, Bond> availableBonds = {
     {"10Y_US_Treasury", Bond("10Y_US_Treasury", 99.78, 100.1, 100.21)},
     {"30Y_US_Treasury", Bond("30Y_US_Treasury", 32.4, 32.41, 32.45)},
     {"10Y_Danish_Treasury", Bond("10Y_Danish_Treasury", 43.4, 43.41, 43.45)},
     {"30Y_Danish_Treasury", Bond("10Y_Danish_Treasury", 61.89, 62.10, 62.21)}};
 
+/**
+ * @brief Cash asset
+ *
+ */
 class Cash : public Asset
 {
 private:
@@ -179,34 +217,44 @@ public:
     }
 };
 
+/**
+ * @brief Conversion traits and concepts.
+ *
+ */
+
 template <typename T>
 concept DerivedFromSecurity = std::is_base_of<Security, T>::value;
 
 template <typename T>
 concept DerivedFromAsset = std::is_base_of<Asset, T>::value;
 
-template<typename T, typename U>
-struct is_convertible_from {
+template <typename T, typename U>
+struct is_convertible_from
+{
     static const bool value = false;
 };
 
-template<DerivedFromSecurity T, DerivedFromSecurity U>
-struct is_convertible_from<T, U> {
+template <DerivedFromSecurity T, DerivedFromSecurity U>
+struct is_convertible_from<T, U>
+{
     static const bool value = false;
 };
 
-template<DerivedFromAsset T>
-struct is_convertible_from<T, T> {
+template <DerivedFromAsset T>
+struct is_convertible_from<T, T>
+{
     static const bool value = false;
 };
 
-template<DerivedFromSecurity T>
-struct is_convertible_from<Cash, T> {
+template <DerivedFromSecurity T>
+struct is_convertible_from<Cash, T>
+{
     static const bool value = true;
 };
 
-template<DerivedFromSecurity T>
-struct is_convertible_from<T, Cash> {
+template <DerivedFromSecurity T>
+struct is_convertible_from<T, Cash>
+{
     static const bool value = true;
 };
 
