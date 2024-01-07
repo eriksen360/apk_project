@@ -27,5 +27,5 @@ public:
 
 private:
     boost::uuids::uuid id;
-    const std::chrono::_V2::system_clock::time_point createdAt;
+    std::chrono::_V2::system_clock::time_point createdAt;
 };

@@ -58,43 +58,41 @@ void cashTransactionThreadFunction()
             {
                 if (fromAccount != nullptr)
                 {
-                    if (fromAccount->getAmount() < amount)
+                    if (fromAccount->getAmount() > amount)
                     {
-                        
-                        try {
-                            bank::SavingsAccount fromAccountTmp = *fromAccount;
-                            fromAccountTmp.addToTransactionLog(std::move(*cashTransaction));
+                          try {
+                              bank::SavingsAccount fromAccountTmp = *fromAccount;
+                              fromAccountTmp.addToTransactionLog(std::move(*cashTransaction));
 
-                            bank::SavingsAccount toAccountTmp = *toAccount;
-                            toAccountTmp.addToTransactionLog(std::move(*cashTransaction));
-
-                            // No-throw guaranteed operations
-                            fromAccount = &fromAccountTmp;
-                            toAccount = &toAccountTmp;
-                            fromAccount->reduceAmount(amount);
-                            toAccount->addAmount(amount);
-                        } catch (std::exception& e) {
-                            std::cout << e.what() << std::endl;
-                            // revert accounts to previous state
-                            continue;
-                        }
+                              // No-throw guaranteed operations
+                              *fromAccount = std::move(fromAccountTmp);
+                              fromAccount->reduceAmount(amount);
+                              toAccount->addAmount(amount);
+                          } catch (std::exception& e) {
+                              std::cout << e.what() << std::endl;
+                              // revert accounts to previous state
+                              continue;
+                          }
                         std::cout << amount << " transfered to account " << toAccount << " with success." << std::endl;
                     }
-                    else {
-                        std::cout << "Not enough funds to transfer amount " << amount << " from account " << fromAccount << std::endl; 
+                    else
+                    {
+                        std::cout << "Not enough funds to transfer amount " << amount << " from account " << fromAccount->getID() << std::endl;
                     }
                 }
                 else
                 {
-                    try {
+                    try
+                    {
                         bank::SavingsAccount toAccountTmp = *toAccount;
                         toAccountTmp.addToTransactionLog(std::move(*cashTransaction));
-                
+
                         // No-throw guaranteed operations
-                        toAccount = &toAccountTmp;
+                        *toAccount = std::move(toAccountTmp);
                         toAccount->addAmount(amount);
-                    
-                    } catch (std::exception& e) {
+                    }
+                    catch (std::exception &e)
+                    {
                         std::cout << e.what() << std::endl;
                         // revert accounts to previous state
                         continue;
@@ -120,110 +118,123 @@ void SecurityTransactionThreadFunction()
     {
         // typeid requires complete types. Cannot check typeid of template class without template arguments.
         // Possibility for using SecurityTransaction as incomplete type to reduce code duplication?
-        if (event_queue.frontIsOfType(typeid(SecurityTransaction<Stock>))) 
+        if (event_queue.frontIsOfType(typeid(SecurityTransaction<Stock>)))
         {
             std::cout << "Stock Type in Queue: " << event_queue.size() << std::endl;
             std::unique_ptr<Event> event = event_queue.dequeue();
-            SecurityTransaction<Stock> *transaction = static_cast<SecurityTransaction<Stock> *>(event.get());
+            auto stockTransaction = static_cast<SecurityTransaction<Stock> *>(event.get());
 
-            if (!transaction->is_stock())
+            if (!stockTransaction->is_stock())
             { // Use constexpr to double check
                 std::cout << "Transaction is not a stock transaction. Skipping." << std::endl;
                 continue;
             }
 
             std::scoped_lock<std::mutex> savingsAccountLock(databaseSavingsAccountsMutex);
-            bank::SavingsAccount *savingsAccount = database.getSavingsAccountFor(transaction->getToAccount());
+            bank::SavingsAccount *savingsAccount = database.getSavingsAccountFor(stockTransaction->getToAccount());
             if (savingsAccount == nullptr)
             {
                 std::cout << "No savings account found for user. Cannot withdraw/deposit funds made by selling/buying stocks." << std::endl;
                 continue;
             }
 
-            if (transaction->getType() == TransactionType::BUY)
+            if (stockTransaction->getType() == TransactionType::BUY)
             {
 
                 std::tuple<std::string, int> securityType;
-                try {
-                    securityType = transaction->getSecuritiesOverview();
-                } catch (std::logic_error& e) {
+                try
+                {
+                    securityType = stockTransaction->getSecuritiesOverview();
+                }
+                catch (std::logic_error &e)
+                {
                     std::cout << e.what() << std::endl;
                     continue;
                 }
 
-                if (transaction->getTransactionBuyAmount() > savingsAccount->getAmount())
+                if (stockTransaction->getTransactionBuyAmount() > savingsAccount->getAmount())
                 {
                     std::cout << "Not enough funds to buy stocks." << std::endl;
                     continue;
                 }
 
                 std::scoped_lock<std::mutex> stockAccountLock(databaseStockAccountsMutex);
-                bank::SecuritiesAccount<Stock, SecurityTransaction<Stock>> *securityAccount = database.getStockAccountFor(transaction->getToAccount());
+                bank::SecuritiesAccount<Stock, SecurityTransaction<Stock>> *securityAccount = database.getStockAccountFor(stockTransaction->getToAccount());
                 if (securityAccount == nullptr)
                 {
                     std::cout << "No bond account found for user. Cannot transfer bonds." << std::endl;
                     continue; // lock released by exiting scope of loop.
                 }
 
-                try {
-                    SecurityTransaction<Stock> transactionTmp = *transaction;
-                    std::vector<Stock> securities = transactionTmp.getSecurities();
+                try
+                {
+                    std::vector<Stock> securities = stockTransaction->getSecurities();
 
-                    double transactionCost = transactionTmp.getTransactionBuyAmount();
+                    double transactionCost = stockTransaction->getTransactionBuyAmount();
                     bank::SecuritiesAccount<Stock, SecurityTransaction<Stock>> securityAccountTmp = *securityAccount;
-                    securityAccountTmp.addToTransactionLog(std::move(transactionTmp));
+                    securityAccountTmp.addToTransactionLog(std::move(*stockTransaction));
                     securityAccountTmp.addSecurities(std::move(securities));
-                    
+
                     // No-throw guaranteed operations
-                    securityAccount = &securityAccountTmp; 
+                    *securityAccount = std::move(securityAccountTmp);
                     savingsAccount->reduceAmount(transactionCost);
-                } catch (std::exception& e) {
+                }
+                catch (std::exception &e)
+                {
                     std::cout << e.what() << std::endl;
                     // revert accounts to previous state
                     continue;
                 }
-
             }
-            else if (transaction->getType() == TransactionType::SELL)
+            else if (stockTransaction->getType() == TransactionType::SELL)
             {
                 std::tuple<std::string, int> securityType;
-                try {
-                    securityType = transaction->getSecuritiesOverview();
-                } catch (std::logic_error& e) {
+                try
+                {
+                    securityType = stockTransaction->getSecuritiesOverview();
+                }
+                catch (std::logic_error &e)
+                {
                     std::cout << e.what() << std::endl;
                     continue;
                 }
-                
+
                 std::scoped_lock<std::mutex> securityAccountLock(databaseStockAccountsMutex);
-                bank::SecuritiesAccount<Stock, SecurityTransaction<Stock>> *securityAccount = database.getStockAccountFor(transaction->getToAccount());
+                bank::SecuritiesAccount<Stock, SecurityTransaction<Stock>> *securityAccount = database.getStockAccountFor(stockTransaction->getToAccount());
                 if (securityAccount == nullptr)
                 {
                     std::cout << "No bond account found for user. Cannot transfer bonds." << std::endl;
                     continue; // lock released by exiting scope of loop.
                 }
 
-                try {
+                try
+                {
                     if (!securityAccount->hasSpecificSecurities(std::get<0>(securityType), std::get<1>(securityType)))
                     {
                         std::cout << "Not enough securities to sell." << std::endl;
                         continue;
                     }
-                } catch (std::logic_error& e) {
+                }
+                catch (std::logic_error &e)
+                {
                     std::cout << e.what() << std::endl;
                     continue;
                 }
-                
-                try {
-                    SecurityTransaction<Stock> transactionTmp = *transaction;
-                    std::vector<Stock> securities = transactionTmp.getSecurities();
+
+                try
+                {
+                    std::vector<Stock> securities = stockTransaction->getSecurities();
 
                     bank::SecuritiesAccount<Stock, SecurityTransaction<Stock>> securityAccountTmp = *securityAccount;
-                    securityAccount->removeSecurities(std::get<0>(securityType), std::get<1>(securityType));     
+                    securityAccountTmp.addToTransactionLog(std::move(*stockTransaction));
+                    securityAccountTmp.removeSecurities(std::get<0>(securityType), std::get<1>(securityType));
 
                     // No-throw guaranteed operations
-                    securityAccount = &securityAccountTmp; 
-                    savingsAccount->addAmount(transaction->getTransactionSellAmount()); 
-                } catch (std::exception& e) {
+                    *securityAccount = std::move(securityAccountTmp);
+                    savingsAccount->addAmount(stockTransaction->getTransactionSellAmount());
+                }
+                catch (std::exception &e)
+                {
                     std::cout << e.what() << std::endl;
                     // revert accounts to previous state
                     continue;
@@ -236,107 +247,119 @@ void SecurityTransactionThreadFunction()
         {
             std::cout << "Bond Type in Queue: " << event_queue.size() << std::endl;
             std::unique_ptr<Event> event = event_queue.dequeue();
-            SecurityTransaction<Bond> *transaction = static_cast<SecurityTransaction<Bond> *>(event.get());
+            auto bondTransaction = static_cast<SecurityTransaction<Bond> *>(event.get());
 
-            if (!transaction->is_bond())
+            if (!bondTransaction->is_bond())
             { // Use constexpr to double check
                 std::cout << "Transaction is not a bond transaction. Skipping." << std::endl;
                 continue;
             }
 
             std::scoped_lock<std::mutex> savingsAccountLock(databaseSavingsAccountsMutex);
-            bank::SavingsAccount *savingsAccount = database.getSavingsAccountFor(transaction->getToAccount());
+            bank::SavingsAccount *savingsAccount = database.getSavingsAccountFor(bondTransaction->getToAccount());
             if (savingsAccount == nullptr)
             {
                 std::cout << "No savings account found for user. Cannot withdraw/deposit funds made by selling/buying bonds." << std::endl;
                 continue;
             }
 
-            if (transaction->getType() == TransactionType::BUY)
+            if (bondTransaction->getType() == TransactionType::BUY)
             {
 
                 std::tuple<std::string, int> securityType;
-                try {
-                    securityType = transaction->getSecuritiesOverview();
-                } catch (std::logic_error& e) {
+                try
+                {
+                    securityType = bondTransaction->getSecuritiesOverview();
+                }
+                catch (std::logic_error &e)
+                {
                     std::cout << e.what() << std::endl;
                     continue;
                 }
 
-                if (transaction->getTransactionBuyAmount() > savingsAccount->getAmount())
+                if (bondTransaction->getTransactionBuyAmount() > savingsAccount->getAmount())
                 {
                     std::cout << "Not enough funds to buy bonds." << std::endl;
                     continue;
                 }
 
                 std::scoped_lock<std::mutex> securityAccountLock(databaseBondAccountsMutex);
-                bank::SecuritiesAccount<Bond, SecurityTransaction<Bond>> *securityAccount = database.getBondAccountFor(transaction->getToAccount());
+                bank::SecuritiesAccount<Bond, SecurityTransaction<Bond>> *securityAccount = database.getBondAccountFor(bondTransaction->getToAccount());
                 if (securityAccount == nullptr)
                 {
                     std::cout << "No bond account found for user. Cannot transfer bonds." << std::endl;
                     continue; // lock released by exiting scope of loop.
                 }
 
-                try {
-                    SecurityTransaction<Bond> transactionTmp = *transaction;
-                    std::vector<Bond> securities = transactionTmp.getSecurities();
+                try
+                {
+                    std::vector<Bond> securities = bondTransaction->getSecurities();
 
                     bank::SecuritiesAccount<Bond, SecurityTransaction<Bond>> securityAccountTmp = *securityAccount;
                     securityAccountTmp.addSecurities(std::move(securities));
-                    double transactionCost = transactionTmp.getTransactionBuyAmount();
-                    securityAccountTmp.addToTransactionLog(std::move(transactionTmp));
+                    double transactionCost = bondTransaction->getTransactionBuyAmount();
+                    securityAccountTmp.addToTransactionLog(std::move(*bondTransaction));
 
                     // No-throw guaranteed operations
-                    securityAccount = &securityAccountTmp; 
+                    *securityAccount = std::move(securityAccountTmp);
                     savingsAccount->reduceAmount(transactionCost);
-                } catch (std::exception& e) {
+                }
+                catch (std::exception &e)
+                {
                     std::cout << e.what() << std::endl;
                     // revert accounts to previous state
                     continue;
                 }
-
             }
-            else if (transaction->getType() == TransactionType::SELL)
+            else if (bondTransaction->getType() == TransactionType::SELL)
             {
                 std::tuple<std::string, int> securityType;
-                try {
-                    securityType = transaction->getSecuritiesOverview();
-                } catch (std::logic_error& e) {
+                try
+                {
+                    securityType = bondTransaction->getSecuritiesOverview();
+                }
+                catch (std::logic_error &e)
+                {
                     std::cout << e.what() << std::endl;
                     continue;
                 }
-                
+
                 std::scoped_lock<std::mutex> bondAccountLock(databaseBondAccountsMutex);
-                bank::SecuritiesAccount<Bond, SecurityTransaction<Bond>> *securityAccount = database.getBondAccountFor(transaction->getToAccount());
+                bank::SecuritiesAccount<Bond, SecurityTransaction<Bond>> *securityAccount = database.getBondAccountFor(bondTransaction->getToAccount());
                 if (securityAccount == nullptr)
                 {
                     std::cout << "No bond account found for user. Cannot transfer bonds." << std::endl;
                     continue; // lock released by exiting scope of loop.
                 }
 
-                try {
+                try
+                {
                     if (!securityAccount->hasSpecificSecurities(std::get<0>(securityType), std::get<1>(securityType)))
                     {
                         std::cout << "Not enough securities to sell." << std::endl;
                         continue;
                     }
-                } catch (std::logic_error& e) {
+                }
+                catch (std::logic_error &e)
+                {
                     std::cout << e.what() << std::endl;
                     continue;
                 }
-                
-                try {
-                    SecurityTransaction<Bond> transactionTmp = *transaction;
-                    std::vector<Bond> securities = transactionTmp.getSecurities();
+
+                try
+                {
+                    std::vector<Bond> securities = bondTransaction->getSecurities();
 
                     bank::SecuritiesAccount<Bond, SecurityTransaction<Bond>> securityAccountTmp = *securityAccount;
-                    securityAccount->removeSecurities(std::get<0>(securityType), std::get<1>(securityType));     
-                    securityAccountTmp.addToTransactionLog(std::move(transactionTmp));
+                    securityAccountTmp.removeSecurities(std::get<0>(securityType), std::get<1>(securityType));
+                    securityAccountTmp.addToTransactionLog(std::move(*bondTransaction));
 
                     // No-throw guaranteed operations
-                    securityAccount = &securityAccountTmp; 
-                    savingsAccount->addAmount(transaction->getTransactionSellAmount()); 
-                } catch (std::exception& e) {
+                    *securityAccount = std::move(securityAccountTmp);
+                    savingsAccount->addAmount(bondTransaction->getTransactionSellAmount());
+                }
+                catch (std::exception &e)
+                {
                     std::cout << e.what() << std::endl;
                     // revert accounts to previous state
                     continue;
@@ -356,14 +379,14 @@ void ConversionTransactionThreadFunction()
     for (;;)
     {
         // Limitation of typeid. Cannot check typeid of template class without template arguments.
-        if (event_queue.frontIsOfType(typeid(ConversionTransaction<Cash, Stock>))) {
+        if (event_queue.frontIsOfType(typeid(ConversionTransaction<Cash, Stock>)))
+        {
             std::cout << "Conversion Type in Queue: " << event_queue.size() << std::endl;
             std::unique_ptr<Event> event = event_queue.dequeue();
             ConversionTransaction<Cash, Stock> *transaction = static_cast<ConversionTransaction<Cash, Stock> *>(event.get());
-            
+
             // Handle Conversion
         }
-         
     }
 }
 
@@ -439,7 +462,7 @@ int main()
         {
             std::cin.ignore();
             std::cin >> choice;
-            if ((choice < 48 || choice > 57) && choice != 81) // C = {0..9}+{Q} 
+            if ((choice < 48 || choice > 57) && choice != 81) // C = {0..9}+{Q}
             {
                 throw std::invalid_argument(&choice);
             }
@@ -454,153 +477,154 @@ int main()
         switch (choice) // Assumes that Client (this) has no access to Accounts for now, so any mistake will be handled silently
         // in the respective thread. Client should return a Future to a list of requests, that the customer can then access
         {
-            case '1': // Make deposit
+        case '1': // Make deposit
+        {
+            std::cout << "Please enter amount to deposit: ";
+            std::cin >> amount;
+            if (amount <= 0)
             {
-                std::cout << "Please enter amount to deposit: ";
-                std::cin >> amount;
-                if (amount <= 0)
-                {
-                    std::cout << "Amount must be positive." << std::endl;
-                    break;
-                } 
-
-                eventRequest = std::make_unique<CashTransaction>(amount, userEmail); // wrap event object in unique_ptr
-                event_queue.enqueue(std::move(eventRequest));                        // move the unique_ptr of the event to the queue
+                std::cout << "Amount must be positive." << std::endl;
                 break;
             }
-            case '2': // Transfer
-            {
-                std::cout << "Please enter amount to transfer: ";
-                std::cin >> amount;
-                if (amount <= 0)
-                {
-                    std::cout << "Amount must be positive." << std::endl;
-                    break;
-                } 
 
-                std::string toEmail;
-                std::cout << "Please enter email to transfer to: ";
-                std::cin >> toEmail;
-                eventRequest = std::make_unique<CashTransaction>(amount, toEmail, userEmail); // wrap event object in unique_ptr
-                event_queue.enqueue(std::move(eventRequest));                                 // move the unique_ptr of the event to the queue
+            eventRequest = std::make_unique<CashTransaction>(amount, userEmail); // wrap event object in unique_ptr
+            event_queue.enqueue(std::move(eventRequest));                        // move the unique_ptr of the event to the queue
+            break;
+        }
+        case '2': // Transfer
+        {
+            std::cout << "Please enter amount to transfer: ";
+            std::cin >> amount;
+            if (amount <= 0)
+            {
+                std::cout << "Amount must be positive." << std::endl;
                 break;
             }
-            case '3': // Buy|Sell Stocks
+
+            std::string toEmail;
+            std::cout << "Please enter email to transfer to: ";
+            std::cin >> toEmail;
+            eventRequest = std::make_unique<CashTransaction>(amount, toEmail, userEmail); // wrap event object in unique_ptr
+            event_queue.enqueue(std::move(eventRequest));                                 // move the unique_ptr of the event to the queue
+            break;
+        }
+        case '3': // Buy|Sell Stocks
+        {
+            std::string stockName;
+            for (auto &stock : availableStocks)
             {
-                std::string stockName;
-                for (auto &stock : availableStocks)
+                stock.second.print();
+            }
+            do
+            {
+                std::cout << "\nPlease enter stock name: ";
+                std::cin >> stockName;
+            } while (!availableStocks.contains(stockName));
+            std::cout << "Please enter amount to buy: ";
+            std::cin >> amount;
+            if (amount <= 0)
+            {
+                std::cout << "Amount must be positive." << std::endl;
+                break;
+            }
+
+            std::string transactionTypeStr;
+            TransactionType transactionType;
+            do
+            {
+                std::cout << "\nPlease enter what to do with stock (SELL/BUY): ";
+                std::cin >> transactionTypeStr;
+                if (transactionTypeStr == "BUY")
                 {
-                    stock.second.print();
+                    transactionType = TransactionType::BUY;
                 }
-                do
+                else if (transactionTypeStr == "SELL")
                 {
-                    std::cout << "\nPlease enter stock name: ";
-                    std::cin >> stockName;
-                } while (!availableStocks.contains(stockName));
-                std::cout << "Please enter amount to buy: ";
-                std::cin >> amount;
-                if (amount <= 0)
-                {
-                    std::cout << "Amount must be positive." << std::endl;
-                    break;
-                } 
-
-                std::string transactionTypeStr;
-                TransactionType transactionType;
-                do
-                {
-                    std::cout << "\nPlease enter what to do with stock (SELL/BUY): ";
-                    std::cin >> transactionTypeStr;
-                    if (transactionTypeStr == "BUY")
-                    {
-                        transactionType = TransactionType::BUY;
-                    }
-                    else if (transactionTypeStr == "SELL")
-                    {
-                        transactionType = TransactionType::SELL;
-                    }
-                } while (transactionType != TransactionType::SELL && transactionType != TransactionType::BUY);
-                std::cout << transactionTypeStr << amount << " " << stockName << " stocks." << std::endl;
-
-                auto stockElem = availableStocks.find(stockName);
-                if (stockElem == availableStocks.end())
-                {
-                    std::cout << "Stock not found." << std::endl;
-                    break;
+                    transactionType = TransactionType::SELL;
                 }
-                Stock stock = stockElem->second;
-                std::cout << "id: " << stock.getID() << std::endl;
-                eventRequest = std::make_unique<SecurityTransaction<Stock>>(userEmail, std::move(stock), amount, transactionType); // wrap event object in unique_ptr
-                event_queue.enqueue(std::move(eventRequest));                                                                      // move the unique_ptr of the event to the queue
-                break;
-            }
-            case '4': // Buy|Sell Bonds
-            {
-                std::string bondName;
-                for (auto &bond : availableBonds)
-                {
-                    bond.second.print();
-                }
-                do
-                {
-                    std::cout << "\nPlease enter bond name: ";
-                    std::cin >> bondName;
-                } while (!availableBonds.contains(bondName));
-                std::cout << "Please enter amount to buy: ";
-                std::cin >> amount;
-                if (amount <= 0)
-                {
-                    std::cout << "Amount must be positive." << std::endl;
-                    break;
-                } 
+            } while (transactionType != TransactionType::SELL && transactionType != TransactionType::BUY);
+            std::cout << transactionTypeStr << amount << " " << stockName << " stocks." << std::endl;
 
-                std::string transactionTypeStr;
-                TransactionType transactionType;
-                do
-                {
-                    std::cout << "\nPlease enter what to do with bond (SELL/BUY): ";
-                    std::cin >> transactionTypeStr;
-                    if (transactionTypeStr == "BUY")
-                    {
-                        transactionType = TransactionType::BUY;
-                    }
-                    else if (transactionTypeStr == "SELL")
-                    {
-                        transactionType = TransactionType::SELL;
-                    }
-                } while (transactionType != TransactionType::SELL && transactionType != TransactionType::BUY);
-                std::cout << transactionTypeStr << " " << amount << " " << bondName << " bonds." << std::endl;
+            auto stockElem = availableStocks.find(stockName);
+            if (stockElem == availableStocks.end())
+            {
+                std::cout << "Stock not found." << std::endl;
+                break;
+            }
+            Stock stock = stockElem->second;
+            std::cout << "id: " << stock.getID() << std::endl;
+            eventRequest = std::make_unique<SecurityTransaction<Stock>>(userEmail, std::move(stock), amount, transactionType); // wrap event object in unique_ptr
+            event_queue.enqueue(std::move(eventRequest));                                                                      // move the unique_ptr of the event to the queue
+            break;
+        }
+        case '4': // Buy|Sell Bonds
+        {
+            std::string bondName;
+            for (auto &bond : availableBonds)
+            {
+                bond.second.print();
+            }
+            do
+            {
+                std::cout << "\nPlease enter bond name: ";
+                std::cin >> bondName;
+            } while (!availableBonds.contains(bondName));
+            std::cout << "Please enter amount to buy: ";
+            std::cin >> amount;
+            if (amount <= 0)
+            {
+                std::cout << "Amount must be positive." << std::endl;
+                break;
+            }
 
-                auto bondElem = availableBonds.find(bondName);
-                if (bondElem == availableBonds.end())
+            std::string transactionTypeStr;
+            TransactionType transactionType;
+            do
+            {
+                std::cout << "\nPlease enter what to do with bond (SELL/BUY): ";
+                std::cin >> transactionTypeStr;
+                if (transactionTypeStr == "BUY")
                 {
-                    std::cout << "Bond not found." << std::endl;
-                    break;
+                    transactionType = TransactionType::BUY;
                 }
-                Bond bond = bondElem->second;
-                std::cout << "id: " << bond.getID() << std::endl;
-                eventRequest = std::make_unique<SecurityTransaction<Bond>>(userEmail, std::move(bond), amount, transactionType); // wrap event object in unique_ptr
-                event_queue.enqueue(std::move(eventRequest));                                                                      // move the unique_ptr of the event to the queue
-                break;
-            }
-            case '5': // Convert between Assets
+                else if (transactionTypeStr == "SELL")
+                {
+                    transactionType = TransactionType::SELL;
+                }
+            } while (transactionType != TransactionType::SELL && transactionType != TransactionType::BUY);
+            std::cout << transactionTypeStr << " " << amount << " " << bondName << " bonds." << std::endl;
+
+            auto bondElem = availableBonds.find(bondName);
+            if (bondElem == availableBonds.end())
             {
-                char answer = 'N';
-                do {
-                    std::cout << "Perform conversion? (Y/N): ";
-                    std::cin >> answer;
-                } while(answer != 'Y');
-                eventRequest = std::make_unique<ConversionTransaction<Cash, Stock>>(userEmail, amount);
-                event_queue.enqueue(std::move(eventRequest));
+                std::cout << "Bond not found." << std::endl;
                 break;
             }
-            case '6':
+            Bond bond = bondElem->second;
+            std::cout << "id: " << bond.getID() << std::endl;
+            eventRequest = std::make_unique<SecurityTransaction<Bond>>(userEmail, std::move(bond), amount, transactionType); // wrap event object in unique_ptr
+            event_queue.enqueue(std::move(eventRequest));                                                                    // move the unique_ptr of the event to the queue
+            break;
+        }
+        case '5': // Convert between Assets
+        {
+            char answer = 'N';
+            do
             {
-                database.displayAccountsFor(userEmail);
-                break;
-            }
-            default:
-                break;
+                std::cout << "Perform conversion? (Y/N): ";
+                std::cin >> answer;
+            } while (answer != 'Y');
+            eventRequest = std::make_unique<ConversionTransaction<Cash, Stock>>(userEmail, amount);
+            event_queue.enqueue(std::move(eventRequest));
+            break;
+        }
+        case '6':
+        {
+            database.displayAccountsFor(userEmail);
+            break;
+        }
+        default:
+            break;
         }
     } while (choice != 'Q');
     return 0;

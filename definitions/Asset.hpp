@@ -146,7 +146,7 @@ class Cash : public Asset
 {
 private:
     int amount = 0;
-    const Currency currency = DKK;
+    Currency currency = DKK;
 
 public:
     Cash(int amount, Currency currency) : amount(amount), currency(currency){};

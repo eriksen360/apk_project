@@ -24,6 +24,8 @@ namespace bank
             id = _id;
         }
 
+        //Account& operator=(const Account&) = default;
+
         virtual void print() = 0;
 
         virtual void addToTransactionLog(T &&t)
@@ -60,8 +62,8 @@ namespace bank
     private:
         std::vector<T> transactions;
         boost::uuids::uuid id;
-        const std::string name;
-        const std::string userEmail;
+        std::string name;
+        std::string userEmail;
     };
 
     class SavingsAccount : public Account<CashTransaction>
@@ -69,6 +71,8 @@ namespace bank
     public:
         SavingsAccount(std::string name, std::string userEmail, Cash &&cash)
             : Account<CashTransaction>(std::move(name), std::move(userEmail)), cash(std::move(cash)) {} // TODO: See exmaple in slides for std::moving own object
+
+        //SavingsAccount& operator=(const SavingsAccount&) = default;
 
         int getAmount() const
         {
@@ -78,7 +82,6 @@ namespace bank
         void addAmount(int n) noexcept
         {
             cash.addAmount(n);
-            std::cout << cash.getAmount() << std::endl;
         }
 
         /*
@@ -167,13 +170,13 @@ namespace bank
         }
 
         bool hasSpecificSecurities(std::string securityName, int amount) {
-            std::vector<A> securitiesToReturn;
+            size_t n_securities = 0;
             for (auto& accountSecurity : securities) {
                 if (accountSecurity.getName() == securityName) {
-                    securitiesToReturn.push_back(accountSecurity);
+                    n_securities++;
                 }
             }
-            if (securitiesToReturn.size() != amount) {
+            if (n_securities < amount) {
                 return false;
             }
             return true;
@@ -186,10 +189,10 @@ namespace bank
                     indiciesToRemove.push_back(i);
                 }
             }
-            if (indiciesToRemove.size() != amount) {
+            if (indiciesToRemove.size() < amount) {
                 throw std::logic_error("Cannot remove from account as not enough stocks.");
             }
-            for (int i = 0; i < indiciesToRemove.size(); i++) {
+            for (int i = 0; i < amount; i++) {
                 // account for that removal of the i'th element shifts indicies of vector by i
                 securities.erase(securities.begin() + indiciesToRemove[i] - i);
             }
@@ -294,6 +297,10 @@ struct DatabaseMock
 
     void displayAccountsFor(std::string userEmail)
     {
+        getSavingsAccountFor(userEmail)->print();
+        getStockAccountFor(userEmail)->print();
+        getBondAccountFor(userEmail)->print();
+        /*
         auto savingsElement = this->savingsAccounts.find(userEmail);
         if (savingsElement != this->savingsAccounts.end())
         {
@@ -311,6 +318,7 @@ struct DatabaseMock
         {
             bondElement->second.print();
         }
+        */
     }
 
     bank::SavingsAccount *getSavingsAccountFor(std::string userEmail)
