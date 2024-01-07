@@ -46,11 +46,19 @@ namespace bank
             return userEmail;
         }
 
-        virtual void printTransactions() const = 0;
+        std::vector<T> getTransactions() const
+        {
+            return transactions;
+        }
 
-        std::vector<T> transactions;  // Fix to avoid ADL and template deduction problems with inherited methods accessing this
+        void printTransactions() const {
+            for (auto& transaction : this->getTransactions()) {
+                transaction.print();
+            }
+        }
 
     private:
+        std::vector<T> transactions;
         boost::uuids::uuid id;
         const std::string name;
         const std::string userEmail;
@@ -70,11 +78,8 @@ namespace bank
         void addAmount(int n) noexcept
         {
             cash.addAmount(n);
+            std::cout << cash.getAmount() << std::endl;
         }
-
-        /*
-            Kan man sætte noexcept på at retunere en reference til en variabel?
-        */
 
         /*
             Noexcept er en erklæring til compileren om at fordi vi som bruger ikke mener denne
@@ -94,12 +99,6 @@ namespace bank
             return cash.getCurrency();
         }
 
-        void printTransactions() const override {
-            for (auto& transaction : transactions) {
-                transaction.print();
-            }
-        }
-
         void print() override
         {
             std::cout << "Type: Savings Account\n"
@@ -108,7 +107,7 @@ namespace bank
                     << "Name: " << this->getName() << '\n'
                     << "Amount: " << getAmount() << "\n"
                     << "-- TRANSACTIONS -- \n";
-            printTransactions();
+            this->printTransactions();
         }
 
     private:
@@ -132,11 +131,9 @@ namespace bank
                     << "Name: " << this->getName() << "\n"
                     << "Email: " << this->getUserEmail() << '\n'
                     << "Total asset value: " << getTotalAssetValue() << '\n'
-                    << "Mean asset value: " << getMeanAssetValue() << '\n';
-                    // TODO: Cannot print something that depends on a template parameter?
-        }
-
-        void printTransactions() const override {
+                    << "Mean asset value: " << getMeanAssetValue() << '\n'
+                    << "-- TRANSACTIONS -- \n";
+            this->printTransactions();
         }
 
         void addSecurity(A&& security)
@@ -146,6 +143,9 @@ namespace bank
 
         double getTotalAssetValue()
         {
+            if (securities.empty()) {
+                return 0;
+            }
             double assetValueSum;
             for (unsigned int i = 0; i < securities.size(); i++)
             {

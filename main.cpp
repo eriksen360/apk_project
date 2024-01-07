@@ -118,7 +118,9 @@ void SecurityTransactionThreadFunction()
 {
     for (;;)
     {
-        if (event_queue.frontIsOfType(typeid(SecurityTransaction<Stock>))) // Check for Stock transaction
+        // typeid requires complete types. Cannot check typeid of template class without template arguments.
+        // Possibility for using SecurityTransaction as incomplete type to reduce code duplication?
+        if (event_queue.frontIsOfType(typeid(SecurityTransaction<Stock>))) 
         {
             std::cout << "Stock Type in Queue: " << event_queue.size() << std::endl;
             std::unique_ptr<Event> event = event_queue.dequeue();
@@ -228,8 +230,9 @@ void SecurityTransactionThreadFunction()
                 }
             }
         }
-
-        else if (event_queue.frontIsOfType(typeid(SecurityTransaction<Bond>))) // Check for Bond transaction
+        // typeid requires complete types. Cannot check typeid of template class without template arguments.
+        // Possibility for using SecurityTransaction as incomplete type to reduce code duplication?
+        else if (event_queue.frontIsOfType(typeid(SecurityTransaction<Bond>)))
         {
             std::cout << "Bond Type in Queue: " << event_queue.size() << std::endl;
             std::unique_ptr<Event> event = event_queue.dequeue();
@@ -431,19 +434,19 @@ int main()
     char choice = 0;
     do
     {
-        std::cout << "Please enter action 1 (Make deposit), 2 (Transfer), 3 (Trade Stocks), 4 (Trade Bonds), 5 (Convert Assets), 6 (Show accounts)" << std::endl;
+        std::cout << "Please enter action 1 (Make deposit), 2 (Transfer), 3 (Trade Stocks), 4 (Trade Bonds), 5 (Convert Assets), 6 (Show accounts), Q (Quit)" << std::endl;
         try
         {
             std::cin.ignore();
             std::cin >> choice;
-            if (choice < 48 || choice > 57) // C = {0..9}  TODO: Should be on illegal type
+            if ((choice < 48 || choice > 57) && choice != 81) // C = {0..9}+{Q} 
             {
                 throw std::invalid_argument(&choice);
             }
         }
         catch (std::invalid_argument const &ex)
         {
-            std::cout << "Please enter a valid choice [Integer range 0-255], and not" << ex.what() << std::endl;
+            std::cout << "Please enter a valid choice [Integer range 0-255], and not " << ex.what() << std::endl;
             choice = '0';
         }
 
@@ -580,7 +583,7 @@ int main()
                 event_queue.enqueue(std::move(eventRequest));                                                                      // move the unique_ptr of the event to the queue
                 break;
             }
-            case '5':
+            case '5': // Convert between Assets
             {
                 char answer = 'N';
                 do {
@@ -599,38 +602,6 @@ int main()
             default:
                 break;
         }
-    } while (choice != 'c');
-
-    // Cleanup and exit
-    // Not possible to call CashTransaction specific function without
-    // casting the Event ptr to CashTransaction ptr.
-    // Should be used with caution, as it is done runtime
-    // Skal laves om til exception hvis den fejler
-    // if (auto cashTransaction = static_cast<CashTransaction *>(eventHandler.get()))
-    // {
-    //     s1.reduceAmount(cashTransaction->getAmount());
-    //     s2.addAmount(cashTransaction->getAmount());
-    // }
-
-    for (auto &x : database.savingsAccounts)
-    {
-        x.second.print();
-    }
-
+    } while (choice != 'Q');
     return 0;
 }
-
-/*
-    Publisher-Consumer Pattern
-
-    3 threads consuming from a queue
-        StockTransactionThread
-        SavingsTransactionThread
-        CompanyTransactionThread
-
-    // Each thread checks the message to see if it should handle the type of event.
-    // Events can be any change to account state. Use futures to get data with std::move?
-
-    // We should use templates for all data
-    // Custom exceptions for handling bad flow paths
-*/

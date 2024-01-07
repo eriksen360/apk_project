@@ -137,10 +137,10 @@ const static std::unordered_map<std::string, Stock> availableStocks = {
     {"MSFT", Stock("MSFT", 6.0, 6.0, 6.0)}};
 
 const static std::unordered_map<std::string, Bond> availableBonds = {
-    {"10Y US Treasury", Bond("10Y US Treasury", 100.0, 100.0, 100.0)},
-    {"30Y US Treasury", Bond("30Y US Treasury", 100.0, 100.0, 100.0)},
-    {"10Y Danish Treasury", Bond("10Y Danish Treasury", 100.0, 100.0, 100.0)},
-    {"30Y Danish Treasury", Bond("10Y Danish Treasury", 100.0, 100.0, 100.0)}};
+    {"10Y_US_Treasury", Bond("10Y_US_Treasury", 99.78, 100.1, 100.21)},
+    {"30Y_US_Treasury", Bond("30Y_US_Treasury", 32.4, 32.41, 32.45)},
+    {"10Y_Danish_Treasury", Bond("10Y_Danish_Treasury", 43.4, 43.41, 43.45)},
+    {"30Y_Danish_Treasury", Bond("10Y_Danish_Treasury", 61.89, 62.10, 62.21)}};
 
 class Cash : public Asset
 {
